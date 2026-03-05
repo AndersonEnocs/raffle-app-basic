@@ -1,2 +1,56 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+// Custom color system for raffle app
+// Tesla / NASA-inspired, clean and modern
+
+:root {
+  // Brand palette (provided by client)
+  --color-vibrant-orange: #FF6B35; // primary call-to-action
+  --color-golden-yellow: #F9C74F;  // jackpots / highlights
+  --color-deep-blue: #2B3A67;      // main background / trust
+  --color-bone-white: #F8F9FA;     // surfaces / cards
+
+  // Ionic color bindings
+  --ion-color-primary: var(--color-vibrant-orange);
+  --ion-color-primary-rgb: 255, 107, 53;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #e05f2f;
+  --ion-color-primary-tint: #ff7a49;
+
+  --ion-color-secondary: var(--color-golden-yellow);
+  --ion-color-secondary-rgb: 249, 199, 79;
+  --ion-color-secondary-contrast: #1b1b1b;
+  --ion-color-secondary-contrast-rgb: 27, 27, 27;
+  --ion-color-secondary-shade: #dbb368;
+  --ion-color-secondary-tint: #f9cf61;
+
+  --ion-color-dark: #0b1021;
+  --ion-color-dark-rgb: 11, 16, 33;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #090d1c;
+  --ion-color-dark-tint: #1d2235;
+
+  --ion-border-radius-lg: 22px;
+  --ion-border-radius-md: 16px;
+  --ion-border-radius-sm: 12px;
+
+  --ion-box-shadow-soft:
+    0 18px 45px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+ion-content {
+  --background: radial-gradient(circle at top left, #394a86 0, #111527 45%, #050712 100%);
+  color: var(--color-bone-white);
+}
+
+ion-toolbar {
+  --background: linear-gradient(90deg, rgba(5, 7, 18, 0.96), rgba(43, 58, 103, 0.98));
+  --border-color: transparent;
+  --color: var(--color-bone-white);
+}
+
+ion-button {
+  --border-radius: var(--ion-border-radius-md);
+  --box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}

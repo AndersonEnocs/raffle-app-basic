@@ -1,20 +1,689 @@
-<ion-header [translucent]="true">
+<ion-header [translucent]="true" class="raffle-header">
   <ion-toolbar>
-    <ion-title>
-      Blank
+    <ion-title class="app-title">
+      <img src="assets/trucks144.png" alt="Family Auto Services" class="header-logo" />
+      <button
+        type="button"
+        class="admin-link"
+        (click)="onAdminClick()"
+      >
+        Admin
+      </button>
     </ion-title>
+    <ion-buttons slot="end" class="header-badge">
+      <ion-chip color="secondary" class="jackpot-chip">
+        <ion-label>Truck 441</ion-label>
+      </ion-chip>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content [fullscreen]="true" class="raffle-content">
+  <div class="main-content">
+  <section class="stats-section ion-padding-horizontal">
+    <ion-grid class="stats-grid">
+      <ion-row class="stats-row">
+        <ion-col size="4" size-md="4" class="stat-col">
+          <ion-card class="stat-card stat-card--total">
+            <ion-card-header>
+              <ion-text color="light">
+                <h3>Total</h3>
+              </ion-text>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="stat-value">{{ stats.total | number }}</div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+        <ion-col size="4" size-md="4" class="stat-col">
+          <ion-card class="stat-card stat-card--sold">
+            <ion-card-header>
+              <ion-text>
+                <h3>Vendidos</h3>
+              </ion-text>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="stat-value">{{ stats.vendidos | number }}</div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+        <ion-col size="4" size-md="4" class="stat-col">
+          <ion-card class="stat-card stat-card--available">
+            <ion-card-header>
+              <ion-text>
+                <h3>Disponibles</h3>
+              </ion-text>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="stat-value">{{ stats.disponibles | number }}</div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </section>
 
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
+  <section class="hero-section ion-padding-horizontal">
+    <ion-grid class="hero-grid">
+      <ion-row class="hero-row hero-row--desktop">
+        <ion-col size="12" class="hero-col">
+          <ion-card class="hero-card">
+            <ion-card-header>
+              <ion-text color="light">
+                <p class="eyebrow-text">El ganador elige su vehículo</p>
+                <ion-card-title>
+                  Rifa Premium Family Auto
+                </ion-card-title>
+              </ion-text>
+            </ion-card-header>
+            <ion-card-content>
+              <div
+                class="hero-slider"
+                (touchstart)="onTouchStart($event)"
+                (touchend)="onTouchEnd($event)"
+              >
+                <button
+                  type="button"
+                  class="slider-nav slider-nav--prev"
+                  aria-label="Anterior"
+                  (click)="prevSlide()"
+                >
+                  <span class="slider-nav__arrow">‹</span>
+                </button>
+                <div class="slider-track">
+                  <div
+                    *ngFor="let image of galleryImages; let i = index"
+                    class="slider-slide"
+                    [class.slider-slide--active]="i === currentSlideIndex()"
+                    [style.backgroundImage]="'url(' + image + ')'"
+                  ></div>
+                </div>
+                <button
+                  type="button"
+                  class="slider-nav slider-nav--next"
+                  aria-label="Siguiente"
+                  (click)="nextSlide()"
+                >
+                  <span class="slider-nav__arrow">›</span>
+                </button>
+                <div class="slider-dots">
+                  <button
+                    *ngFor="let image of galleryImages; let i = index"
+                    type="button"
+                    class="slider-dot"
+                    [class.slider-dot--active]="i === currentSlideIndex()"
+                    [attr.aria-label]="'Ir a imagen ' + (i + 1)"
+                    (click)="goToSlide(i)"
+                  ></button>
+                </div>
+                <span class="slider-counter">
+                  {{ currentSlideIndex() + 1 }} / {{ totalSlides }}
+                </span>
+              </div>
+
+              <p class="hero-description">
+                Aprovecha tu rifa: curso exclusivo y participación en el sorteo de vehículos de alta gama.
+                El ganador elige el vehículo de su preferencia entre los premios disponibles.
+              </p>
+
+              <div class="hero-actions">
+                <ion-button
+                  fill="solid"
+                  size="large"
+                  class="hero-btn-gallery"
+                  (click)="toggleGallery(true)"
+                >
+                  Ver galería
+                </ion-button>
+
+                <ion-button
+                  size="large"
+                  (click)="togglePurchase(true)"
+                >
+                  Comprar curso
+                  <ion-badge color="secondary" class="price-badge">
+                    {{ coursePrice | currency:'USD':'symbol' }}
+                  </ion-badge>
+                </ion-button>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </section>
+
+  <footer class="app-footer">
+    <span class="app-footer__credit">Creado por Anderson Enocs Morillo Guzmán</span>
+  </footer>
   </div>
+
+  <!-- Modal Galería -->
+  <ion-modal
+    [isOpen]="isGalleryOpen()"
+    (didDismiss)="toggleGallery(false)"
+    mode="ios"
+    class="gallery-modal"
+  >
+    <ng-template>
+      <ion-header translucent>
+        <ion-toolbar>
+          <ion-title>Galería de premios</ion-title>
+          <ion-buttons slot="end">
+            <ion-button fill="clear" (click)="toggleGallery(false)">
+              Cerrar
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="gallery-content">
+        <div
+          class="gallery-slider"
+          (touchstart)="onTouchStart($event)"
+          (touchend)="onTouchEnd($event)"
+        >
+          <button
+            type="button"
+            class="slider-nav slider-nav--prev slider-nav--large"
+            aria-label="Anterior"
+            (click)="prevSlide()"
+          >
+            <span class="slider-nav__arrow">‹</span>
+          </button>
+          <div class="slider-track slider-track--full">
+            <div
+              *ngFor="let image of galleryImages; let i = index"
+              class="slider-slide slider-slide--full"
+              [class.slider-slide--active]="i === currentSlideIndex()"
+              [style.backgroundImage]="'url(' + image + ')'"
+            ></div>
+          </div>
+          <button
+            type="button"
+            class="slider-nav slider-nav--next slider-nav--large"
+            aria-label="Siguiente"
+            (click)="nextSlide()"
+          >
+            <span class="slider-nav__arrow">›</span>
+          </button>
+          <div class="slider-dots slider-dots--bottom">
+            <button
+              *ngFor="let image of galleryImages; let i = index"
+              type="button"
+              class="slider-dot"
+              [class.slider-dot--active]="i === currentSlideIndex()"
+              [attr.aria-label]="'Ir a imagen ' + (i + 1)"
+              (click)="goToSlide(i)"
+            ></button>
+          </div>
+          <span class="slider-counter slider-counter--bottom">
+            {{ currentSlideIndex() + 1 }} / {{ totalSlides }}
+          </span>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Comprar Curso -->
+  <ion-modal
+    [isOpen]="isPurchaseOpen()"
+    (didDismiss)="togglePurchase(false)"
+    mode="ios"
+    class="purchase-modal"
+  >
+    <ng-template>
+      <ion-header translucent>
+        <ion-toolbar>
+          <ion-title>Compra tu curso</ion-title>
+          <ion-buttons slot="end">
+            <ion-button fill="clear" (click)="togglePurchase(false)">
+              Cerrar
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="purchase-content">
+        <section class="purchase-form ion-padding-horizontal ion-padding-vertical">
+          <div class="number-search-card">
+            <ion-input
+              type="number"
+              class="number-search-input"
+              placeholder="Encuentra tu número"
+              [ngModel]="searchNumber()"
+              (ngModelChange)="searchNumber.set($event)"
+            ></ion-input>
+
+            <ion-button
+              color="primary"
+              class="number-search-ok"
+              (click)="onSearchConfirm()"
+            >
+              OK
+            </ion-button>
+          </div>
+
+          <div class="number-actions">
+            <ion-button
+              expand="block"
+              color="primary"
+              (click)="pickRandomNumber()"
+            >
+              Elige un número por mí
+            </ion-button>
+
+            <ion-button
+              expand="block"
+              color="medium"
+              fill="outline"
+              (click)="openAllNumbers()"
+            >
+              Ver todos los números
+            </ion-button>
+
+            <ion-button
+              expand="block"
+              color="danger"
+              fill="outline"
+              (click)="clearNumbers()"
+            >
+              Borrar números
+            </ion-button>
+
+            <ion-button
+              expand="block"
+              color="success"
+              (click)="openOrder()"
+            >
+              Ver mi orden
+            </ion-button>
+          </div>
+
+          <div class="selected-numbers" *ngIf="selectedNumbers().length">
+            <ion-list lines="none">
+              <ion-item class="summary-item">
+                <ion-label>
+                  <h2>Números seleccionados</h2>
+                  <p>Total {{ selectedNumbers().length }} x {{ coursePrice | currency:'USD':'symbol' }}</p>
+                </ion-label>
+                <ion-badge color="secondary">
+                  {{ importe() | currency:'USD':'symbol' }}
+                </ion-badge>
+              </ion-item>
+            </ion-list>
+
+            <div class="number-chips">
+              <ng-container *ngFor="let item of selectedNumbers()">
+                <!-- Reservado por el sistema: círculo animado con colores -->
+                <span
+                  *ngIf="item.type === 'system'"
+                  class="number-chip number-chip--system"
+                  [attr.aria-label]="'Número reservado ' + item.value"
+                >
+                  <span class="number-chip__ring"></span>
+                  <span class="number-chip__value">{{ item.value }}</span>
+                </span>
+                <!-- Elegido por el usuario: chip normal -->
+                <ion-chip
+                  *ngIf="item.type === 'user'"
+                  color="secondary"
+                  class="number-chip number-chip--user"
+                >
+                  <ion-label>{{ item.value }}</ion-label>
+                </ion-chip>
+              </ng-container>
+            </div>
+          </div>
+        </section>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Ver todos los números -->
+  <ion-modal
+    [isOpen]="isAllNumbersOpen()"
+    (didDismiss)="closeAllNumbers()"
+    mode="ios"
+    class="all-numbers-modal"
+  >
+    <ng-template>
+      <ion-header class="all-numbers-header">
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button fill="clear" (click)="closeAllNumbers()">Regresar</ion-button>
+          </ion-buttons>
+          <ion-title class="all-numbers-header__info">
+            <span class="all-numbers-header__stat">Números {{ selectedNumbers().length }}</span>
+            <span class="all-numbers-header__stat">Importe {{ importe() | currency:'USD':'symbol' }}</span>
+          </ion-title>
+          <ion-buttons slot="end">
+            <ion-button color="success" (click)="closeAllNumbers(); togglePurchase(true)">
+              Comprar
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="all-numbers-content">
+        <div class="all-numbers-pagination">
+          <ion-button fill="outline" size="small" (click)="allNumbersPrevPage()" [disabled]="allNumbersPage() <= 1">
+            Anterior
+          </ion-button>
+          <span class="all-numbers-pagination__label">
+            Página {{ allNumbersPage() }} de {{ allNumbersTotalPages() }}
+          </span>
+          <ion-button fill="outline" size="small" (click)="allNumbersNextPage()" [disabled]="allNumbersPage() >= allNumbersTotalPages()">
+            Siguiente
+          </ion-button>
+        </div>
+
+        <div class="all-numbers-grid">
+          <button
+            *ngFor="let n of numbersForCurrentPage()"
+            type="button"
+            class="all-numbers-cell"
+            [class.all-numbers-cell--available]="isNumberAvailable(n)"
+            [class.all-numbers-cell--unavailable]="!isNumberAvailable(n)"
+            [class.all-numbers-cell--selected]="isNumberSelected(n)"
+            [attr.aria-label]="'Número ' + n + (isNumberAvailable(n) ? ' disponible' : ' no disponible')"
+            (click)="isNumberAvailable(n) && addNumberFromGrid(n)"
+          >
+            {{ n }}
+          </button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Ver mi orden -->
+  <ion-modal
+    [isOpen]="isOrderOpen()"
+    (didDismiss)="closeOrder()"
+    mode="ios"
+    class="order-modal"
+  >
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Mi orden</ion-title>
+          <ion-buttons slot="end">
+            <ion-button fill="clear" (click)="closeOrder()">Cerrar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="order-content">
+        <section class="order-form ion-padding">
+          <div class="order-form__fields">
+            <ion-input
+              type="text"
+              class="order-input"
+              placeholder="NOMBRE"
+              [ngModel]="orderName()"
+              (ngModelChange)="orderName.set($event)"
+            ></ion-input>
+            <ion-input
+              type="tel"
+              class="order-input"
+              placeholder="TELÉFONO"
+              [ngModel]="orderPhone()"
+              (ngModelChange)="orderPhone.set($event)"
+            ></ion-input>
+          </div>
+
+          <h2 class="order-section-title">TUS PEDIDOS</h2>
+
+          <div class="order-table">
+            <div class="order-table__header">
+              <span class="order-table__cell order-table__cell--product">PRODUCTOS</span>
+              <span class="order-table__cell order-table__cell--subtotal">SUBTOTAL</span>
+            </div>
+            <div
+              *ngFor="let line of orderLines()"
+              class="order-table__row"
+            >
+              <span class="order-table__cell order-table__cell--product">{{ line.label }}</span>
+              <span class="order-table__cell order-table__cell--subtotal">{{ line.subtotal | currency:'USD':'symbol' }}</span>
+            </div>
+            <div class="order-table__row order-table__row--total">
+              <span class="order-table__cell order-table__cell--product">Total</span>
+              <span class="order-table__cell order-table__cell--subtotal">{{ importe() | currency:'USD':'symbol' }}</span>
+            </div>
+          </div>
+
+          <ion-button
+            expand="block"
+            size="large"
+            class="order-stripe-btn"
+            (click)="payWithStripe()"
+          >
+            Pagar con Stripe
+          </ion-button>
+        </section>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Login Admin -->
+  <ion-modal
+    [isOpen]="isAdminLoginOpen()"
+    (didDismiss)="closeAdminLogin()"
+    mode="ios"
+    class="admin-login-modal"
+  >
+    <ng-template>
+      <ion-header translucent>
+        <ion-toolbar>
+          <ion-title>Acceso administrador</ion-title>
+          <ion-buttons slot="end">
+            <ion-button fill="clear" (click)="closeAdminLogin()">
+              Cerrar
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="admin-login-content">
+        <section class="admin-login-form ion-padding">
+          <p class="admin-login-description">
+            Ingresa la clave de administrador para acceder al panel.
+          </p>
+
+          <ion-item class="admin-login-item" lines="none">
+            <ion-input
+              type="password"
+              label="Contraseña"
+              labelPlacement="stacked"
+              [ngModel]="adminPassword()"
+              (ngModelChange)="adminPassword.set($event)"
+              (keyup.enter)="submitAdminLogin()"
+            ></ion-input>
+          </ion-item>
+
+          <ion-text color="danger" *ngIf="adminAuthError()">
+            <p class="admin-login-error">
+              {{ adminAuthError() }}
+            </p>
+          </ion-text>
+
+          <ion-button
+            expand="block"
+            size="large"
+            class="admin-login-btn"
+            (click)="submitAdminLogin()"
+          >
+            Entrar
+          </ion-button>
+        </section>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Dashboard Admin -->
+  <ion-modal
+    [isOpen]="isAdminDashboardOpen()"
+    (didDismiss)="closeAdminDashboard()"
+    mode="ios"
+    class="admin-dashboard-modal"
+  >
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button fill="clear" (click)="logoutAdmin()">
+              Cerrar sesión
+            </ion-button>
+          </ion-buttons>
+          <ion-title>Panel de administración</ion-title>
+          <ion-buttons slot="end">
+            <ion-button fill="clear" (click)="closeAdminDashboard()">
+              Cerrar
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="admin-dashboard-content">
+        <section class="admin-dashboard ion-padding">
+          <div class="admin-dashboard__header">
+            <h2 class="admin-dashboard__title">Resumen general</h2>
+            <p class="admin-dashboard__subtitle">
+              Vista rápida de jugadores y órdenes del sistema.
+            </p>
+          </div>
+
+          <ion-grid class="admin-dashboard-grid">
+            <ion-row class="admin-dashboard-row">
+              <ion-col size="12" size-md="6">
+                <ion-card
+                  class="admin-widget admin-widget--players"
+                  button="true"
+                  (click)="openPlayersModal()"
+                >
+                  <ion-card-header>
+                    <ion-text color="light">
+                      <p class="admin-widget__eyebrow">Gestión</p>
+                      <ion-card-title>Jugadores</ion-card-title>
+                    </ion-text>
+                  </ion-card-header>
+                  <ion-card-content>
+                    <div class="admin-widget__metric">
+                      <span class="admin-widget__metric-value">
+                        {{ players.length }}
+                      </span>
+                      <span class="admin-widget__metric-label">
+                        jugadores registrados (demo)
+                      </span>
+                    </div>
+                    <p class="admin-widget__hint">
+                      Toca para ver el listado detallado de jugadores.
+                    </p>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+
+              <ion-col size="12" size-md="6">
+                <ion-card class="admin-widget admin-widget--orders">
+                  <ion-card-header>
+                    <ion-text color="light">
+                      <p class="admin-widget__eyebrow">Reporte clave</p>
+                      <ion-card-title>Reporte de órdenes</ion-card-title>
+                    </ion-text>
+                  </ion-card-header>
+                  <ion-card-content>
+                    <div class="admin-widget__metric admin-widget__metric--orders">
+                      <span class="admin-widget__metric-value">
+                        {{ players.length }}
+                      </span>
+                      <span class="admin-widget__metric-label">
+                        órdenes completadas (demo)
+                      </span>
+                    </div>
+                    <p class="admin-widget__hint">
+                      Aquí irá el reporte detallado de órdenes similar al PDF de ejemplo.
+                    </p>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </section>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Lista de Jugadores -->
+  <ion-modal
+    [isOpen]="isPlayersModalOpen()"
+    (didDismiss)="closePlayersModal()"
+    mode="ios"
+    class="players-modal"
+  >
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Jugadores (demo)</ion-title>
+          <ion-buttons slot="end">
+            <ion-button fill="clear" (click)="closePlayersModal()">
+              Cerrar
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="players-content">
+        <section class="players-section ion-padding-horizontal ion-padding-vertical">
+          <div class="players-header">
+            <h2 class="players-header__title">Listado de jugadores</h2>
+            <p class="players-header__subtitle">
+              Datos simulados para pruebas de interfaz.
+            </p>
+          </div>
+
+          <ion-list lines="full" class="players-list">
+            <ion-item
+              class="players-list__header"
+              lines="none"
+            >
+              <ion-label>
+                <div class="players-list__header-row">
+                  <span>#</span>
+                  <span>Nombre</span>
+                  <span>Teléfono</span>
+                  <span>Orden</span>
+                  <span>Status</span>
+                </div>
+              </ion-label>
+            </ion-item>
+
+            <ion-item
+              *ngFor="let player of players"
+              class="players-list__item"
+            >
+              <ion-label>
+                <div class="players-list__row">
+                  <span class="players-list__cell players-list__cell--index">
+                    {{ player.id }}
+                  </span>
+                  <span class="players-list__cell players-list__cell--name">
+                    {{ player.name }}
+                  </span>
+                  <span class="players-list__cell players-list__cell--phone">
+                    {{ player.phone }}
+                  </span>
+                  <span class="players-list__cell players-list__cell--order">
+                    {{ player.order }}
+                  </span>
+                  <span class="players-list__cell players-list__cell--status">
+                    {{ player.status }}
+                  </span>
+                </div>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        </section>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>
