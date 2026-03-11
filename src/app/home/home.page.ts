@@ -27,7 +27,7 @@ import { FormsModule } from '@angular/forms';
 import { AdminAuthService } from '../admin-auth.service';
 import { AdminRafflesService } from '../admin-raffles.service';
 import { LoadingController, ToastController } from '@ionic/angular';
-import { Raffle, RaffleService, TicketsInfo } from '../public-raffle.service';
+import { Raffle, RaffleService, TicketsInfo, PurchaseRequest } from '../public-raffle.service';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -75,6 +75,7 @@ export class HomePage implements OnInit {
   readonly raffleData = signal<Raffle | null>(null);
   readonly loading = signal<boolean>(false);
   readonly soldTickets = signal<number>(0);
+  readonly hasRaffle = signal<boolean>(true);
 
   readonly coursePrice = computed(() => this.raffleData()?.price ?? 20);
 
@@ -150,6 +151,7 @@ export class HomePage implements OnInit {
   readonly raffleImages = signal<File[]>([]);
   readonly createRaffleError = signal('');
   readonly isCreateRaffleLoading = signal(false);
+  readonly isProcessingPayment = signal(false);
 
   readonly allNumbersPage = signal(1);
 
@@ -261,28 +263,29 @@ export class HomePage implements OnInit {
 
   async loadLatestRaffle() {
     this.loading.set(true);
+
     const loading = await this.loadingCtrl.create({
       message: 'Cargando rifa...',
     });
     await loading.present();
 
-    this.raffleService.getLatestRaffle().subscribe({
-      next: (data: Raffle) => {
+    try {
+      const data = await firstValueFrom(this.raffleService.getLatestRaffle());
+
+      if (data && data._id) {
         this.raffleData.set(data);
-      },
-      error: async (err: Error) => {
-        const toast = await this.toastCtrl.create({
-          message: 'Error al cargar la rifa. Intenta de nuevo.',
-          duration: 3000,
-          color: 'danger'
-        });
-        await toast.present();
-      },
-      complete: () => {
-        this.loading.set(false);
-        loading.dismiss();
+        this.hasRaffle.set(true);
+      } else {
+        this.raffleData.set(null);
+        this.hasRaffle.set(false);
       }
-    });
+    } catch {
+      this.raffleData.set(null);
+      this.hasRaffle.set(false);
+    } finally {
+      this.loading.set(false);
+      await loading.dismiss();
+    }
   }
 
   onAdminClick(): void {
@@ -360,6 +363,8 @@ export class HomePage implements OnInit {
         images: this.raffleImages(),
       });
       this.closeCreateRaffleModal();
+      // Cargar la rifa recién creada automáticamente
+      await this.loadLatestRaffle();
     } catch (error) {
       this.createRaffleError.set('Error al crear la rifa');
     } finally {
@@ -552,7 +557,95 @@ export class HomePage implements OnInit {
     this.isOrderOpen.set(false);
   }
 
-  payWithStripe(): void {
-    console.log('Pago con Stripe simulado');
+  async payWithStripe(): Promise<void> {
+    // Evitar múltiples clics
+    if (this.isProcessingPayment()) {
+      return;
+    }
+
+    this.isProcessingPayment.set(true);
+
+    const raffle = this.raffleData();
+    const raffleId = raffle?._id;
+
+    if (!raffleId) {
+      this.isProcessingPayment.set(false);
+      const toast = await this.toastCtrl.create({
+        message: 'Error: No se pudo identificar la rifa.',
+        duration: 3000,
+        color: 'danger',
+      });
+      await toast.present();
+      return;
+    }
+
+    const name = this.orderName().trim();
+    const phone = this.orderPhone().trim();
+    const numbers = this.selectedNumbers().map((n) => n.value);
+
+    if (!name || !phone) {
+      this.isProcessingPayment.set(false);
+      const toast = await this.toastCtrl.create({
+        message: 'Por favor completa tu nombre y teléfono.',
+        duration: 3000,
+        color: 'warning',
+      });
+      await toast.present();
+      return;
+    }
+
+    if (numbers.length === 0) {
+      this.isProcessingPayment.set(false);
+      const toast = await this.toastCtrl.create({
+        message: 'Selecciona al menos un número.',
+        duration: 3000,
+        color: 'warning',
+      });
+      await toast.present();
+      return;
+    }
+
+    const loading = await this.loadingCtrl.create({
+      message: 'Procesando pago...',
+    });
+    await loading.present();
+
+    try {
+      const response = await firstValueFrom(
+        this.raffleService.purchaseTickets(raffleId, {
+          name,
+          phone,
+          numbers,
+        }),
+      );
+
+      const checkoutUrl = response?.checkoutUrl;
+
+      if (checkoutUrl) {
+        // Redireccionar al checkout de Stripe
+        window.location.href = checkoutUrl;
+      } else {
+        this.isProcessingPayment.set(false);
+        const toast = await this.toastCtrl.create({
+          message: 'Error al obtener el enlace de pago.',
+          duration: 3000,
+          color: 'danger',
+        });
+        await toast.present();
+      }
+    } catch (error: any) {
+      this.isProcessingPayment.set(false);
+      const message =
+        error?.error?.message || 'Error al procesar el pago. Intenta de nuevo.';
+      const toast = await this.toastCtrl.create({
+        message,
+        duration: 3000,
+        color: 'danger',
+      });
+      await toast.present();
+    } finally {
+      this.isProcessingPayment.set(false);
+      await loading.dismiss();
+    }
   }
 }

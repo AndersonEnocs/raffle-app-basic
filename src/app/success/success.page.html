@@ -1,0 +1,61 @@
+<ion-header [translucent]="true" class="success-header">
+  <ion-toolbar>
+    <ion-title class="success-title">Confirmación</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="success-content">
+  <div class="success-container">
+    <ion-card class="success-card">
+      <ion-card-content class="success-card__content">
+        <div class="success-icon-wrapper">
+          <ion-icon
+            class="success-icon"
+            name="checkmark-circle"
+            color="success"
+          ></ion-icon>
+        </div>
+
+        <ion-text color="light">
+          <h1 class="success-heading">¡Pago Exitoso!</h1>
+        </ion-text>
+
+        <ion-text color="medium">
+          <p class="success-message">
+            Tu participación ha sido confirmada. Pronto recibirás los detalles
+            de tus números rifa por WhatsApp.
+          </p>
+        </ion-text>
+
+        <div class="success-details" *ngIf="ticketId">
+          <ion-text color="medium">
+            <span class="success-details__label">ID de transacción:</span>
+          </ion-text>
+          <ion-text color="light">
+            <span class="success-details__value">{{ ticketId }}</span>
+          </ion-text>
+        </div>
+
+        <div class="success-info">
+          <ion-text color="medium">
+            <p class="success-info__text">
+              <strong>Próximos pasos:</strong><br />
+              • Te contactaremos al número proporcionado<br />
+              • Recibirás la confirmación de tus números<br />
+              • El sorteo se realizará en la fecha indicada
+            </p>
+          </ion-text>
+        </div>
+
+        <ion-button
+          expand="block"
+          size="large"
+          class="success-btn"
+          (click)="goHome()"
+        >
+          Volver al inicio
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

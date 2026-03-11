@@ -29,6 +29,19 @@ export interface TicketsInfo {
   availableNumbers: number[];
 }
 
+export interface PurchaseRequest {
+  name: string;
+  phone: string;
+  numbers: number[];
+}
+
+export interface PurchaseResponse {
+  ticketId: string;
+  checkoutUrl: string;
+  totalAmount: number;
+  currency: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -57,6 +70,16 @@ export class RaffleService {
   getTicketsInfo(raffleId: string): Observable<TicketsInfo> {
     return this.http.get<TicketsInfo>(
       `${this.apiBaseUrl}/tickets/${raffleId}/tickets-info`,
+    );
+  }
+
+  purchaseTickets(
+    raffleId: string,
+    payload: PurchaseRequest,
+  ): Observable<PurchaseResponse> {
+    return this.http.post<PurchaseResponse>(
+      `${this.apiBaseUrl}/tickets/${raffleId}/purchase`,
+      payload,
     );
   }
 }
