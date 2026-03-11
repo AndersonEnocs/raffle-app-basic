@@ -16,7 +16,9 @@ export interface Raffle {
   description?: string;
   price: number;
   totalTickets: number;
-  soldTickets?: number;
+  ticketsAvailable?: number;
+  ticketsSold?: number;
+  takenNumbers?: number[];
   images: string[];
   status?: 'active' | 'completed' | 'cancelled';
   createdAt?: string;

@@ -74,7 +74,6 @@ export class HomePage implements OnInit {
 
   readonly raffleData = signal<Raffle | null>(null);
   readonly loading = signal<boolean>(false);
-  readonly soldTickets = signal<number>(0);
   readonly hasRaffle = signal<boolean>(true);
 
   readonly coursePrice = computed(() => this.raffleData()?.price ?? 20);
@@ -105,12 +104,14 @@ export class HomePage implements OnInit {
   }
 
   readonly stats = computed(() => {
-    const total = this.raffleData()?.totalTickets ?? 3000;
-    const vendidos = this.soldTickets();
+    const raffle = this.raffleData();
+    const total = raffle?.totalTickets ?? 3000;
+    const vendidos = raffle?.ticketsSold ?? 0;
+    const disponibles = raffle?.ticketsAvailable ?? (total - vendidos);
     return {
       total,
       vendidos,
-      disponibles: total - vendidos,
+      disponibles,
     };
   });
 
@@ -404,36 +405,30 @@ export class HomePage implements OnInit {
       return;
     }
 
-    try {
-      const ticketsInfo: TicketsInfo = await firstValueFrom(
-        this.raffleService.getTicketsInfo(raffle._id),
-      );
-
-      this.availableNumbers.set(new Set(ticketsInfo.availableNumbers));
-
-      const vendidos = ticketsInfo.totalTickets - ticketsInfo.availableNumbers.length;
-      this.soldTickets.set(vendidos);
-
-      this.raffleData.update((current) =>
-        current
-          ? {
-              ...current,
-              totalTickets: ticketsInfo.totalTickets,
-            }
-          : current,
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Error al cargar los números disponibles.';
-      this.toastCtrl
-        .create({
-          message,
-          duration: 3000,
-          color: 'danger',
-        })
-        .then((toast) => toast.present());
+    // Si el API ya devuelve takenNumbers, usarlos directamente
+    if (raffle.takenNumbers && raffle.takenNumbers.length > 0) {
+      // Crear set de todos los números disponibles (los que NO están en takenNumbers)
+      const total = raffle.totalTickets;
+      const takenSet = new Set(raffle.takenNumbers);
+      const available: number[] = [];
+      
+      for (let i = 1; i <= total; i++) {
+        if (!takenSet.has(i)) {
+          available.push(i);
+        }
+      }
+      
+      this.availableNumbers.set(new Set(available));
+    } else {
+      // Si no hay takenNumbers, intentar obtenerlos del endpoint
+      try {
+        const ticketsInfo: TicketsInfo = await firstValueFrom(
+          this.raffleService.getTicketsInfo(raffle._id),
+        );
+        this.availableNumbers.set(new Set(ticketsInfo.availableNumbers));
+      } catch (error) {
+        // Silenciar error, usar valores por defecto
+      }
     }
 
     this.isAllNumbersOpen.set(true);
