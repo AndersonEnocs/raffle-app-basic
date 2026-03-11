@@ -72,7 +72,7 @@
               <ion-text color="light">
                 <p class="eyebrow-text">El ganador elige su vehículo</p>
                 <ion-card-title>
-                  Rifa Premium Family Auto
+                  Rifa Premium Truck 441
                 </ion-card-title>
               </ion-text>
             </ion-card-header>
@@ -512,8 +512,9 @@
             size="large"
             class="admin-login-btn"
             (click)="submitAdminLogin()"
+            [disabled]="isAdminLoading()"
           >
-            Entrar
+            {{ isAdminLoading() ? 'Entrando…' : 'Entrar' }}
           </ion-button>
         </section>
       </ion-content>
@@ -606,8 +607,153 @@
                   </ion-card-content>
                 </ion-card>
               </ion-col>
+
+              <ion-col size="12" size-md="6">
+                <ion-card
+                  class="admin-widget admin-widget--raffle"
+                  button="true"
+                  (click)="openCreateRaffleModal()"
+                >
+                  <ion-card-header>
+                    <ion-text color="light">
+                      <p class="admin-widget__eyebrow">Acción rápida</p>
+                      <ion-card-title>Crear nueva rifa</ion-card-title>
+                    </ion-text>
+                  </ion-card-header>
+                  <ion-card-content>
+                    <div class="admin-widget__metric admin-widget__metric--raffle">
+                      <span class="admin-widget__metric-value">
+                        +
+                      </span>
+                      <span class="admin-widget__metric-label">
+                        Configura una nueva rifa premium para tu campaña.
+                      </span>
+                    </div>
+                    <p class="admin-widget__hint">
+                      Abre un asistente rápido para definir nombre, fecha y precio del ticket.
+                    </p>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
             </ion-row>
           </ion-grid>
+        </section>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Crear Rifa -->
+  <ion-modal
+    [isOpen]="isCreateRaffleOpen()"
+    (didDismiss)="closeCreateRaffleModal()"
+    mode="ios"
+    class="create-raffle-modal"
+  >
+    <ng-template>
+      <ion-header translucent>
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button fill="clear" (click)="closeCreateRaffleModal()">
+              Cancelar
+            </ion-button>
+          </ion-buttons>
+          <ion-title>Crear nueva rifa</ion-title>
+          <ion-buttons slot="end">
+            <ion-button
+              fill="clear"
+              color="success"
+              (click)="submitCreateRaffle()"
+              [disabled]="isCreateRaffleLoading()"
+            >
+              {{ isCreateRaffleLoading() ? 'Guardando…' : 'Guardar' }}
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="create-raffle-content">
+        <section class="create-raffle-section ion-padding-horizontal ion-padding-vertical">
+          <div class="create-raffle-header">
+            <h2 class="create-raffle-title">Detalles de la rifa</h2>
+            <p class="create-raffle-subtitle">
+              Define la información básica de la rifa que verán tus jugadores.
+            </p>
+          </div>
+
+          <div class="create-raffle-form">
+            <ion-item lines="full" class="create-raffle-item">
+              <ion-input
+                label="Título"
+                labelPlacement="stacked"
+                placeholder="Ej. Mi primera rifa"
+                [ngModel]="raffleTitle()"
+                (ngModelChange)="raffleTitle.set($event)"
+              ></ion-input>
+            </ion-item>
+
+            <ion-item lines="full" class="create-raffle-item">
+              <ion-input
+                label="Descripción (opcional)"
+                labelPlacement="stacked"
+                placeholder="Descripción opcional de la rifa"
+                [ngModel]="raffleDescription()"
+                (ngModelChange)="raffleDescription.set($event)"
+              ></ion-input>
+            </ion-item>
+
+            <ion-item lines="full" class="create-raffle-item">
+              <ion-input
+                type="number"
+                label="Precio (USD)"
+                labelPlacement="stacked"
+                [ngModel]="raffleTicketPrice()"
+                (ngModelChange)="raffleTicketPrice.set($event)"
+              ></ion-input>
+            </ion-item>
+
+            <ion-item lines="full" class="create-raffle-item">
+              <ion-input
+                type="number"
+                label="Total de tickets"
+                labelPlacement="stacked"
+                [ngModel]="raffleTotalTickets()"
+                (ngModelChange)="raffleTotalTickets.set($event)"
+              ></ion-input>
+            </ion-item>
+
+            <div class="create-raffle-upload">
+              <label class="create-raffle-upload__label">Imágenes</label>
+              <input
+                class="create-raffle-upload__input"
+                type="file"
+                accept="image/*"
+                multiple
+                (change)="onRaffleImagesSelected($any($event.target).files)"
+              />
+              <p class="create-raffle-upload__hint" *ngIf="raffleImages().length">
+                {{ raffleImages().length }} archivo(s) seleccionado(s)
+              </p>
+              <p class="create-raffle-upload__hint" *ngIf="!raffleImages().length">
+                Selecciona una o más imágenes para la rifa.
+              </p>
+            </div>
+          </div>
+
+          <ion-text color="danger" *ngIf="createRaffleError()">
+            <p class="create-raffle-error">{{ createRaffleError() }}</p>
+          </ion-text>
+
+          <div class="create-raffle-actions">
+            <ion-button
+              expand="block"
+              size="large"
+              color="success"
+              (click)="submitCreateRaffle()"
+              [disabled]="isCreateRaffleLoading()"
+            >
+              {{ isCreateRaffleLoading() ? 'Guardando…' : 'Guardar rifa' }}
+            </ion-button>
+          </div>
         </section>
       </ion-content>
     </ng-template>

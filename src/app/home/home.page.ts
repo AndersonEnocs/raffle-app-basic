@@ -24,6 +24,8 @@ import {
 } from '@ionic/angular/standalone';
 import { CommonModule, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AdminAuthService } from '../admin-auth.service';
+import { AdminRafflesService } from '../admin-raffles.service';
 
 @Component({
   selector: 'app-home',
@@ -59,6 +61,11 @@ import { FormsModule } from '@angular/forms';
   ],
 })
 export class HomePage {
+  constructor(
+    private readonly adminAuth: AdminAuthService,
+    private readonly adminRaffles: AdminRafflesService,
+  ) {}
+
   readonly coursePrice = 20;
 
   readonly stats = {
@@ -94,20 +101,33 @@ export class HomePage {
   readonly isAdminLoginOpen = signal(false);
   readonly isAdminDashboardOpen = signal(false);
   readonly isPlayersModalOpen = signal(false);
+  readonly isCreateRaffleOpen = signal(false);
 
   readonly orderName = signal('');
   readonly orderPhone = signal('');
 
   readonly adminPassword = signal('');
-  readonly adminAuthError = signal('');
-  readonly isAdminAuthenticated = signal(false);
 
-  /** Página actual en "Ver todos los números" (1-based). */
+  readonly isAdminAuthenticated = computed(
+    () => this.adminAuth.isAuthenticated(),
+  );
+
+  readonly adminAuthError = computed(() => this.adminAuth.error() ?? '');
+
+  readonly isAdminLoading = computed(() => this.adminAuth.isLoading());
+
+  readonly raffleTitle = signal('');
+  readonly raffleDescription = signal('');
+  readonly raffleTicketPrice = signal(this.coursePrice);
+  readonly raffleTotalTickets = signal(this.stats.total);
+  readonly raffleImages = signal<File[]>([]);
+  readonly createRaffleError = signal('');
+  readonly isCreateRaffleLoading = signal(false);
+
   readonly allNumbersPage = signal(1);
 
   readonly searchNumber = signal<string>('');
 
-  /** Cada número guarda si fue reservado por el sistema o elegido por el usuario. */
   readonly selectedNumbers = signal<
     Array<{ value: number; type: 'system' | 'user' }>
   >([]);
@@ -214,7 +234,7 @@ export class HomePage {
 
   openAdminLogin(): void {
     this.adminPassword.set('');
-    this.adminAuthError.set('');
+    this.adminAuth.clearError();
     this.isAdminLoginOpen.set(true);
   }
 
@@ -222,17 +242,19 @@ export class HomePage {
     this.isAdminLoginOpen.set(false);
   }
 
-  submitAdminLogin(): void {
+  async submitAdminLogin(): Promise<void> {
     const value = (this.adminPassword() ?? '').trim();
-    if (value === 'curso2026') {
-      this.isAdminAuthenticated.set(true);
-      this.adminAuthError.set('');
-      this.isAdminLoginOpen.set(false);
-      this.isAdminDashboardOpen.set(true);
+    if (!value) {
+      this.adminAuth.clearError();
+      this.adminAuthError();
       return;
     }
 
-    this.adminAuthError.set('Contraseña incorrecta. Intenta de nuevo.');
+    const success = await this.adminAuth.login(value);
+    if (success && this.isAdminAuthenticated()) {
+      this.isAdminLoginOpen.set(false);
+      this.isAdminDashboardOpen.set(true);
+    }
   }
 
   closeAdminDashboard(): void {
@@ -240,7 +262,7 @@ export class HomePage {
   }
 
   logoutAdmin(): void {
-    this.isAdminAuthenticated.set(false);
+    this.adminAuth.logout();
     this.isAdminDashboardOpen.set(false);
   }
 
@@ -250,6 +272,76 @@ export class HomePage {
 
   closePlayersModal(): void {
     this.isPlayersModalOpen.set(false);
+  }
+
+  openCreateRaffleModal(): void {
+    this.raffleTitle.set('');
+    this.raffleDescription.set('');
+    this.raffleTicketPrice.set(this.coursePrice);
+    this.raffleTotalTickets.set(this.stats.total);
+    this.raffleImages.set([]);
+    this.createRaffleError.set('');
+    this.isCreateRaffleOpen.set(true);
+  }
+
+  closeCreateRaffleModal(): void {
+    this.isCreateRaffleOpen.set(false);
+  }
+
+  onRaffleImagesSelected(files: FileList | null): void {
+    if (!files || files.length === 0) {
+      this.raffleImages.set([]);
+      return;
+    }
+    this.raffleImages.set(Array.from(files));
+  }
+
+  async submitCreateRaffle(): Promise<void> {
+    if (this.isCreateRaffleLoading()) return;
+
+    const title = (this.raffleTitle() ?? '').trim();
+    const description = (this.raffleDescription() ?? '').trim();
+    const price = Number(this.raffleTicketPrice());
+    const totalTickets = Number(this.raffleTotalTickets());
+    const images = this.raffleImages();
+
+    if (!title) {
+      this.createRaffleError.set('El título es obligatorio.');
+      return;
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      this.createRaffleError.set('El precio debe ser un número mayor a 0.');
+      return;
+    }
+    if (!Number.isFinite(totalTickets) || totalTickets <= 0) {
+      this.createRaffleError.set('La cantidad total de tickets debe ser mayor a 0.');
+      return;
+    }
+    if (!images.length) {
+      this.createRaffleError.set('Selecciona al menos una imagen.');
+      return;
+    }
+
+    this.isCreateRaffleLoading.set(true);
+    this.createRaffleError.set('');
+    try {
+      await this.adminRaffles.createRaffle({
+        title,
+        description: description || undefined,
+        price,
+        totalTickets,
+        images,
+      });
+      this.isCreateRaffleOpen.set(false);
+    } catch (err: any) {
+      const message =
+        err?.error?.message ||
+        err?.message ||
+        'No se pudo crear la rifa. Intenta de nuevo.';
+      this.createRaffleError.set(String(message));
+    } finally {
+      this.isCreateRaffleLoading.set(false);
+    }
   }
 
   /** Números vendidos/no disponibles: simulados (1 hasta stats.vendidos). */
