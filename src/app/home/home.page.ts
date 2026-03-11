@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -26,6 +26,8 @@ import { CommonModule, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminAuthService } from '../admin-auth.service';
 import { AdminRafflesService } from '../admin-raffles.service';
+import { LoadingController, ToastController } from '@ionic/angular';
+import { Raffle, RaffleService } from '../public-raffle.service';
 
 @Component({
   selector: 'app-home',
@@ -60,36 +62,60 @@ import { AdminRafflesService } from '../admin-raffles.service';
     IonBadge,
   ],
 })
-export class HomePage {
+export class HomePage implements OnInit {
   constructor(
     private readonly adminAuth: AdminAuthService,
     private readonly adminRaffles: AdminRafflesService,
+    private readonly raffleService: RaffleService,
+    private readonly loadingCtrl: LoadingController,
+    private readonly toastCtrl: ToastController,
   ) {}
 
-  readonly coursePrice = 20;
+  readonly raffleData = signal<Raffle | null>(null);
+  readonly loading = signal<boolean>(false);
+  readonly soldTickets = signal<number>(0);
 
-  readonly stats = {
-    total: 3000,
-    vendidos: 300,
-    disponibles: 2700,
-  };
+  readonly coursePrice = computed(() => this.raffleData()?.price ?? 20);
 
-  readonly galleryImages: string[] = [
-    'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800',
-    'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=800',
-    'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800',
-    'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800',
-    'https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=800',
-    'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800',
-    'https://images.unsplash.com/photo-1542362567-b07e54306153?w=800',
-    'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800',
-    'https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=800',
-  ];
+  // Getters for template use to avoid signal type issues
+  getRaffleTitle(): string {
+    return this.raffleData()?.title ?? 'Rifa Premium Truck 441';
+  }
 
-  /** Índice actual del slider (hero y modal comparten lógica). */
+  getRaffleDescription(): string {
+    return this.raffleData()?.description ?? 'Aprovecha tu rifa: curso exclusivo y participación en el sorteo de vehículos de alta gama. El ganador elige el vehículo de su preferencia entre los premios disponibles.';
+  }
+
+  getCoursePriceValue(): number {
+    return this.coursePrice();
+  }
+
+  getStatsTotal(): number {
+    return this.stats().total;
+  }
+
+  getStatsVendidos(): number {
+    return this.stats().vendidos;
+  }
+
+  getStatsDisponibles(): number {
+    return this.stats().disponibles;
+  }
+
+  readonly stats = computed(() => {
+    const total = this.raffleData()?.totalTickets ?? 3000;
+    const vendidos = this.soldTickets();
+    return {
+      total,
+      vendidos,
+      disponibles: total - vendidos,
+    };
+  });
+
+  readonly galleryImages = computed(() => this.raffleData()?.images ?? []);
+
   readonly currentSlideIndex = signal(0);
 
-  /** Para swipe táctil: inicio del gesto. */
   private touchStartX = 0;
   private touchStartY = 0;
 
@@ -118,8 +144,8 @@ export class HomePage {
 
   readonly raffleTitle = signal('');
   readonly raffleDescription = signal('');
-  readonly raffleTicketPrice = signal(this.coursePrice);
-  readonly raffleTotalTickets = signal(this.stats.total);
+  readonly raffleTicketPrice = signal<number>(this.coursePrice());
+  readonly raffleTotalTickets = signal<number>(3000);
   readonly raffleImages = signal<File[]>([]);
   readonly createRaffleError = signal('');
   readonly isCreateRaffleLoading = signal(false);
@@ -205,31 +231,63 @@ export class HomePage {
   ];
 
   readonly importe = computed(
-    () => this.selectedNumbers().length * this.coursePrice,
+    () => this.selectedNumbers().length * this.coursePrice(),
   );
 
-  /** Líneas del pedido para la tabla: cada número + línea "Curso × N". */
   readonly orderLines = computed(() => {
     const entries = this.selectedNumbers();
     const lines: Array<{ label: string; subtotal: number }> = [];
     entries.forEach((e) => {
-      lines.push({ label: `${e.value} × 1`, subtotal: 0 });
+      lines.push({
+        label: `Número ${e.value}`,
+        subtotal: this.coursePrice(),
+      });
     });
     if (entries.length > 0) {
       lines.push({
         label: `Curso × ${entries.length}`,
-        subtotal: entries.length * this.coursePrice,
+        subtotal: entries.length * this.coursePrice(),
       });
     }
     return lines;
   });
 
+  ngOnInit() {
+    this.loadLatestRaffle();
+  }
+
+  async loadLatestRaffle() {
+    this.loading.set(true);
+    const loading = await this.loadingCtrl.create({
+      message: 'Cargando rifa...',
+    });
+    await loading.present();
+
+    this.raffleService.getLatestRaffle().subscribe({
+      next: (data: Raffle) => {
+        this.raffleData.set(data);
+      },
+      error: async (err: Error) => {
+        const toast = await this.toastCtrl.create({
+          message: 'Error al cargar la rifa. Intenta de nuevo.',
+          duration: 3000,
+          color: 'danger'
+        });
+        await toast.present();
+      },
+      complete: () => {
+        this.loading.set(false);
+        loading.dismiss();
+      }
+    });
+  }
+
   onAdminClick(): void {
     if (this.isAdminAuthenticated()) {
       this.isAdminDashboardOpen.set(true);
-      return;
+    } else {
+      this.openAdminLogin();
     }
-    this.openAdminLogin();
   }
 
   openAdminLogin(): void {
@@ -243,16 +301,9 @@ export class HomePage {
   }
 
   async submitAdminLogin(): Promise<void> {
-    const value = (this.adminPassword() ?? '').trim();
-    if (!value) {
-      this.adminAuth.clearError();
-      this.adminAuthError();
-      return;
-    }
-
-    const success = await this.adminAuth.login(value);
-    if (success && this.isAdminAuthenticated()) {
-      this.isAdminLoginOpen.set(false);
+    await this.adminAuth.login(this.adminPassword());
+    if (this.isAdminAuthenticated()) {
+      this.closeAdminLogin();
       this.isAdminDashboardOpen.set(true);
     }
   }
@@ -263,7 +314,7 @@ export class HomePage {
 
   logoutAdmin(): void {
     this.adminAuth.logout();
-    this.isAdminDashboardOpen.set(false);
+    this.closeAdminDashboard();
   }
 
   openPlayersModal(): void {
@@ -277,8 +328,8 @@ export class HomePage {
   openCreateRaffleModal(): void {
     this.raffleTitle.set('');
     this.raffleDescription.set('');
-    this.raffleTicketPrice.set(this.coursePrice);
-    this.raffleTotalTickets.set(this.stats.total);
+    this.raffleTicketPrice.set(this.coursePrice());
+    this.raffleTotalTickets.set(this.stats().total);
     this.raffleImages.set([]);
     this.createRaffleError.set('');
     this.isCreateRaffleOpen.set(true);
@@ -289,85 +340,52 @@ export class HomePage {
   }
 
   onRaffleImagesSelected(files: FileList | null): void {
-    if (!files || files.length === 0) {
-      this.raffleImages.set([]);
-      return;
+    if (files) {
+      this.raffleImages.set(Array.from(files));
     }
-    this.raffleImages.set(Array.from(files));
   }
 
   async submitCreateRaffle(): Promise<void> {
-    if (this.isCreateRaffleLoading()) return;
-
-    const title = (this.raffleTitle() ?? '').trim();
-    const description = (this.raffleDescription() ?? '').trim();
-    const price = Number(this.raffleTicketPrice());
-    const totalTickets = Number(this.raffleTotalTickets());
-    const images = this.raffleImages();
-
-    if (!title) {
-      this.createRaffleError.set('El título es obligatorio.');
-      return;
-    }
-    if (!Number.isFinite(price) || price <= 0) {
-      this.createRaffleError.set('El precio debe ser un número mayor a 0.');
-      return;
-    }
-    if (!Number.isFinite(totalTickets) || totalTickets <= 0) {
-      this.createRaffleError.set('La cantidad total de tickets debe ser mayor a 0.');
-      return;
-    }
-    if (!images.length) {
-      this.createRaffleError.set('Selecciona al menos una imagen.');
-      return;
-    }
-
     this.isCreateRaffleLoading.set(true);
     this.createRaffleError.set('');
     try {
       await this.adminRaffles.createRaffle({
-        title,
-        description: description || undefined,
-        price,
-        totalTickets,
-        images,
+        title: this.raffleTitle(),
+        description: this.raffleDescription(),
+        price: this.raffleTicketPrice(),
+        totalTickets: this.raffleTotalTickets(),
+        images: this.raffleImages(),
       });
-      this.isCreateRaffleOpen.set(false);
-    } catch (err: any) {
-      const message =
-        err?.error?.message ||
-        err?.message ||
-        'No se pudo crear la rifa. Intenta de nuevo.';
-      this.createRaffleError.set(String(message));
+      this.closeCreateRaffleModal();
+    } catch (error) {
+      this.createRaffleError.set('Error al crear la rifa');
     } finally {
       this.isCreateRaffleLoading.set(false);
     }
   }
 
-  /** Números vendidos/no disponibles: simulados (1 hasta stats.vendidos). */
   isNumberAvailable(n: number): boolean {
-    return n > this.stats.vendidos;
+    return n > this.stats().vendidos;
   }
 
-  /** Tamaño de página y total de páginas para la grilla de números. */
   readonly allNumbersPerPage = 100;
   readonly allNumbersTotalPages = computed(() =>
-    Math.ceil(this.stats.total / this.allNumbersPerPage),
+    Math.ceil(this.stats().total / this.allNumbersPerPage),
   );
 
-  /** Números a mostrar en la página actual. */
   readonly numbersForCurrentPage = computed(() => {
-    const page = this.allNumbersPage();
-    const start = (page - 1) * this.allNumbersPerPage + 1;
-    const end = Math.min(start + this.allNumbersPerPage - 1, this.stats.total);
-    const list: number[] = [];
-    for (let i = start; i <= end; i++) list.push(i);
-    return list;
+    const start = (this.allNumbersPage() - 1) * this.allNumbersPerPage + 1;
+    const end = Math.min(start + this.allNumbersPerPage - 1, this.stats().total);
+    const numbers = [];
+    for (let i = start; i <= end; i++) {
+      numbers.push(i);
+    }
+    return numbers;
   });
 
   openAllNumbers(): void {
-    this.isAllNumbersOpen.set(true);
     this.allNumbersPage.set(1);
+    this.isAllNumbersOpen.set(true);
   }
 
   closeAllNumbers(): void {
@@ -375,29 +393,28 @@ export class HomePage {
   }
 
   allNumbersPrevPage(): void {
-    this.allNumbersPage.update((p) => Math.max(1, p - 1));
+    if (this.allNumbersPage() > 1) {
+      this.allNumbersPage.update((p) => p - 1);
+    }
   }
 
   allNumbersNextPage(): void {
-    this.allNumbersPage.update((p) =>
-      Math.min(this.allNumbersTotalPages(), p + 1),
-    );
+    if (this.allNumbersPage() < this.allNumbersTotalPages()) {
+      this.allNumbersPage.update((p) => p + 1);
+    }
   }
 
-  /** Añadir número desde la grilla (solo si está disponible y no está ya elegido). */
   addNumberFromGrid(n: number): void {
-    if (!this.isNumberAvailable(n)) return;
-    const values = this.selectedNumbers().map((e) => e.value);
-    if (values.includes(n)) return;
-    this.selectedNumbers.update((entries) =>
-      [...entries, { value: n, type: 'user' as const }].sort(
-        (a, b) => a.value - b.value,
-      ),
-    );
+    if (this.isNumberAvailable(n) && !this.isNumberSelected(n)) {
+      this.selectedNumbers.update((nums) => [
+        ...nums,
+        { value: n, type: 'user' },
+      ]);
+    }
   }
 
   isNumberSelected(n: number): boolean {
-    return this.selectedNumbers().map((e) => e.value).includes(n);
+    return this.selectedNumbers().some((num) => num.value === n);
   }
 
   toggleGallery(open: boolean): void {
@@ -408,37 +425,41 @@ export class HomePage {
   }
 
   get totalSlides(): number {
-    return this.galleryImages.length;
+    return this.galleryImages().length;
   }
 
   goToSlide(index: number): void {
-    const n = this.totalSlides;
-    const i = ((index % n) + n) % n;
-    this.currentSlideIndex.set(i);
+    this.currentSlideIndex.set(index);
   }
 
   nextSlide(): void {
-    this.goToSlide(this.currentSlideIndex() + 1);
+    this.currentSlideIndex.update((i) =>
+      i < this.totalSlides - 1 ? i + 1 : 0,
+    );
   }
 
   prevSlide(): void {
-    this.goToSlide(this.currentSlideIndex() - 1);
+    this.currentSlideIndex.update((i) =>
+      i > 0 ? i - 1 : this.totalSlides - 1,
+    );
   }
 
   onTouchStart(e: TouchEvent): void {
-    this.touchStartX = e.changedTouches[0].pageX;
-    this.touchStartY = e.changedTouches[0].pageY;
+    this.touchStartX = e.touches[0].clientX;
+    this.touchStartY = e.touches[0].clientY;
   }
 
   onTouchEnd(e: TouchEvent): void {
-    const endX = e.changedTouches[0].pageX;
-    const endY = e.changedTouches[0].pageY;
-    const dx = endX - this.touchStartX;
-    const dy = endY - this.touchStartY;
-    const minSwipe = 50;
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > minSwipe) {
-      if (dx > 0) this.prevSlide();
-      else this.nextSlide();
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaX = touchEndX - this.touchStartX;
+    const deltaY = touchEndY - this.touchStartY;
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+      if (deltaX > 0) {
+        this.prevSlide();
+      } else {
+        this.nextSlide();
+      }
     }
   }
 
@@ -447,41 +468,34 @@ export class HomePage {
   }
 
   onSearchConfirm(): void {
-    const value = Number(this.searchNumber());
-
-    if (!Number.isFinite(value) || value <= 0 || value > this.stats.total) {
-      return;
-    }
-
-    const values = this.selectedNumbers().map((e) => e.value);
-    if (!values.includes(value)) {
-      this.selectedNumbers.update((entries) =>
-        [...entries, { value, type: 'user' as const }].sort((a, b) => a.value - b.value),
-      );
+    const num = parseInt(this.searchNumber(), 10);
+    if (num >= 1 && num <= this.stats().total && this.isNumberAvailable(num)) {
+      this.selectedNumbers.update((nums) => [
+        ...nums,
+        { value: num, type: 'user' },
+      ]);
+      this.searchNumber.set('');
     }
   }
 
   pickRandomNumber(): void {
-    const max = this.stats.total;
-    const taken = new Set(this.selectedNumbers().map((e) => e.value));
-
-    if (taken.size >= max) {
-      return;
+    const available = [];
+    for (let i = 1; i <= this.stats().total; i++) {
+      if (this.isNumberAvailable(i) && !this.isNumberSelected(i)) {
+        available.push(i);
+      }
     }
-
-    let candidate = 0;
-    do {
-      candidate = Math.floor(Math.random() * max) + 1;
-    } while (taken.has(candidate));
-
-    this.selectedNumbers.update((entries) =>
-      [...entries, { value: candidate, type: 'system' as const }].sort((a, b) => a.value - b.value),
-    );
+    if (available.length > 0) {
+      const random = available[Math.floor(Math.random() * available.length)];
+      this.selectedNumbers.update((nums) => [
+        ...nums,
+        { value: random, type: 'system' },
+      ]);
+    }
   }
 
   clearNumbers(): void {
     this.selectedNumbers.set([]);
-    this.searchNumber.set('');
   }
 
   openOrder(): void {
@@ -493,11 +507,6 @@ export class HomePage {
   }
 
   payWithStripe(): void {
-    // Placeholder: aquí integrarías Stripe (Checkout Session, etc.)
-    console.log('Pagar con Stripe', {
-      name: this.orderName(),
-      phone: this.orderPhone(),
-      total: this.importe(),
-    });
+    console.log('Pago con Stripe simulado');
   }
 }

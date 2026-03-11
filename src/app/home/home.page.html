@@ -31,7 +31,7 @@
               </ion-text>
             </ion-card-header>
             <ion-card-content>
-              <div class="stat-value">{{ stats.total | number }}</div>
+              <div class="stat-value">{{ getStatsTotal() | number }}</div>
             </ion-card-content>
           </ion-card>
         </ion-col>
@@ -43,7 +43,7 @@
               </ion-text>
             </ion-card-header>
             <ion-card-content>
-              <div class="stat-value">{{ stats.vendidos | number }}</div>
+              <div class="stat-value">{{ getStatsVendidos() | number }}</div>
             </ion-card-content>
           </ion-card>
         </ion-col>
@@ -55,7 +55,7 @@
               </ion-text>
             </ion-card-header>
             <ion-card-content>
-              <div class="stat-value">{{ stats.disponibles | number }}</div>
+              <div class="stat-value">{{ getStatsDisponibles() | number }}</div>
             </ion-card-content>
           </ion-card>
         </ion-col>
@@ -72,7 +72,7 @@
               <ion-text color="light">
                 <p class="eyebrow-text">El ganador elige su vehículo</p>
                 <ion-card-title>
-                  Rifa Premium Truck 441
+                  {{ getRaffleTitle() }}
                 </ion-card-title>
               </ion-text>
             </ion-card-header>
@@ -92,7 +92,7 @@
                 </button>
                 <div class="slider-track">
                   <div
-                    *ngFor="let image of galleryImages; let i = index"
+                    *ngFor="let image of galleryImages(); let i = index"
                     class="slider-slide"
                     [class.slider-slide--active]="i === currentSlideIndex()"
                     [style.backgroundImage]="'url(' + image + ')'"
@@ -108,7 +108,7 @@
                 </button>
                 <div class="slider-dots">
                   <button
-                    *ngFor="let image of galleryImages; let i = index"
+                    *ngFor="let image of galleryImages(); let i = index"
                     type="button"
                     class="slider-dot"
                     [class.slider-dot--active]="i === currentSlideIndex()"
@@ -122,8 +122,7 @@
               </div>
 
               <p class="hero-description">
-                Aprovecha tu rifa: curso exclusivo y participación en el sorteo de vehículos de alta gama.
-                El ganador elige el vehículo de su preferencia entre los premios disponibles.
+                {{ getRaffleDescription() }}
               </p>
 
               <div class="hero-actions">
@@ -142,7 +141,7 @@
                 >
                   Comprar curso
                   <ion-badge color="secondary" class="price-badge">
-                    {{ coursePrice | currency:'USD':'symbol' }}
+                    {{ getCoursePriceValue() | currency:'USD':'symbol' }}
                   </ion-badge>
                 </ion-button>
               </div>
@@ -193,7 +192,7 @@
           </button>
           <div class="slider-track slider-track--full">
             <div
-              *ngFor="let image of galleryImages; let i = index"
+              *ngFor="let image of galleryImages(); let i = index"
               class="slider-slide slider-slide--full"
               [class.slider-slide--active]="i === currentSlideIndex()"
               [style.backgroundImage]="'url(' + image + ')'"
@@ -209,7 +208,7 @@
           </button>
           <div class="slider-dots slider-dots--bottom">
             <button
-              *ngFor="let image of galleryImages; let i = index"
+              *ngFor="let image of galleryImages(); let i = index"
               type="button"
               class="slider-dot"
               [class.slider-dot--active]="i === currentSlideIndex()"
@@ -305,7 +304,7 @@
               <ion-item class="summary-item">
                 <ion-label>
                   <h2>Números seleccionados</h2>
-                  <p>Total {{ selectedNumbers().length }} x {{ coursePrice | currency:'USD':'symbol' }}</p>
+                  <p>Total {{ selectedNumbers().length }} x {{ getCoursePriceValue() | currency:'USD':'symbol' }}</p>
                 </ion-label>
                 <ion-badge color="secondary">
                   {{ importe() | currency:'USD':'symbol' }}
