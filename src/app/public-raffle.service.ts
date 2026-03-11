@@ -24,6 +24,11 @@ export interface Raffle {
   __v?: number;
 }
 
+export interface TicketsInfo {
+  totalTickets: number;
+  availableNumbers: number[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -47,5 +52,11 @@ export class RaffleService {
 
   getAllRaffles(): Observable<Raffle[]> {
     return this.http.get<Raffle[]>(`${this.apiBaseUrl}/raffles`);
+  }
+
+  getTicketsInfo(raffleId: string): Observable<TicketsInfo> {
+    return this.http.get<TicketsInfo>(
+      `${this.apiBaseUrl}/tickets/${raffleId}/tickets-info`,
+    );
   }
 }

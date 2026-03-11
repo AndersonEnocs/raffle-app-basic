@@ -27,7 +27,8 @@ import { FormsModule } from '@angular/forms';
 import { AdminAuthService } from '../admin-auth.service';
 import { AdminRafflesService } from '../admin-raffles.service';
 import { LoadingController, ToastController } from '@ionic/angular';
-import { Raffle, RaffleService } from '../public-raffle.service';
+import { Raffle, RaffleService, TicketsInfo } from '../public-raffle.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -151,6 +152,8 @@ export class HomePage implements OnInit {
   readonly isCreateRaffleLoading = signal(false);
 
   readonly allNumbersPage = signal(1);
+
+  readonly availableNumbers = signal<Set<number>>(new Set());
 
   readonly searchNumber = signal<string>('');
 
@@ -365,10 +368,14 @@ export class HomePage implements OnInit {
   }
 
   isNumberAvailable(n: number): boolean {
+    const availableSet = this.availableNumbers();
+    if (availableSet.size > 0) {
+      return availableSet.has(n);
+    }
     return n > this.stats().vendidos;
   }
 
-  readonly allNumbersPerPage = 100;
+  readonly allNumbersPerPage = 1000;
   readonly allNumbersTotalPages = computed(() =>
     Math.ceil(this.stats().total / this.allNumbersPerPage),
   );
@@ -383,8 +390,47 @@ export class HomePage implements OnInit {
     return numbers;
   });
 
-  openAllNumbers(): void {
+  async openAllNumbers(): Promise<void> {
     this.allNumbersPage.set(1);
+
+    const raffle = this.raffleData();
+    if (!raffle?._id) {
+      this.isAllNumbersOpen.set(true);
+      return;
+    }
+
+    try {
+      const ticketsInfo: TicketsInfo = await firstValueFrom(
+        this.raffleService.getTicketsInfo(raffle._id),
+      );
+
+      this.availableNumbers.set(new Set(ticketsInfo.availableNumbers));
+
+      const vendidos = ticketsInfo.totalTickets - ticketsInfo.availableNumbers.length;
+      this.soldTickets.set(vendidos);
+
+      this.raffleData.update((current) =>
+        current
+          ? {
+              ...current,
+              totalTickets: ticketsInfo.totalTickets,
+            }
+          : current,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Error al cargar los números disponibles.';
+      this.toastCtrl
+        .create({
+          message,
+          duration: 3000,
+          color: 'danger',
+        })
+        .then((toast) => toast.present());
+    }
+
     this.isAllNumbersOpen.set(true);
   }
 
