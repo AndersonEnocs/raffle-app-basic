@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../environments/environment';
 
 export interface RaffleResponse {
@@ -16,9 +16,7 @@ export interface Raffle {
   description?: string;
   price: number;
   totalTickets: number;
-  ticketsAvailable?: number;
-  ticketsSold?: number;
-  takenNumbers?: number[];
+  soldTickets?: number;
   images: string[];
   status?: 'active' | 'completed' | 'cancelled';
   createdAt?: string;
@@ -31,19 +29,6 @@ export interface TicketsInfo {
   availableNumbers: number[];
 }
 
-export interface PurchaseRequest {
-  name: string;
-  phone: string;
-  numbers: number[];
-}
-
-export interface PurchaseResponse {
-  ticketId: string;
-  checkoutUrl: string;
-  totalAmount: number;
-  currency: string;
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -53,11 +38,20 @@ export class RaffleService {
   private readonly apiBaseUrl =
     (environment as any).apiBaseUrl ?? 'http://localhost:3000';
 
-  getLatestRaffle(): Observable<Raffle> {
-    return this.http.get<RaffleResponse>(`${this.apiBaseUrl}/raffles/latest`).pipe(
-      map((response) => response.data)
-    );
-  }
+    async getLatestRaffle(): Promise<Raffle> {
+      console.log('>>> SERVICE: Iniciando getLatestRaffle con URL:', `${this.apiBaseUrl}/raffles/latest`);
+    
+      try {
+        const response = await firstValueFrom(
+          this.http.get<RaffleResponse>(`${this.apiBaseUrl}/raffles/latest`)
+        );
+        console.log('>>> SERVICE: Respuesta cruda:', response);
+        return response.data;
+      } catch (err) {
+        console.error('>>> SERVICE: Error crudo en http.get:', err);
+        throw err;
+      }
+    }
 
   getRaffleById(id: number): Observable<Raffle> {
     return this.http.get<RaffleResponse>(`${this.apiBaseUrl}/raffles/${id}`).pipe(
@@ -72,16 +66,6 @@ export class RaffleService {
   getTicketsInfo(raffleId: string): Observable<TicketsInfo> {
     return this.http.get<TicketsInfo>(
       `${this.apiBaseUrl}/tickets/${raffleId}/tickets-info`,
-    );
-  }
-
-  purchaseTickets(
-    raffleId: string,
-    payload: PurchaseRequest,
-  ): Observable<PurchaseResponse> {
-    return this.http.post<PurchaseResponse>(
-      `${this.apiBaseUrl}/tickets/${raffleId}/purchase`,
-      payload,
     );
   }
 }

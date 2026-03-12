@@ -63,19 +63,7 @@
     </ion-grid>
   </section>
 
-  <!-- Mensaje cuando no hay rifa disponible -->
-  <section *ngIf="!hasRaffle()" class="no-raffle-section ion-padding">
-    <ion-card class="no-raffle-card">
-      <ion-card-content class="no-raffle-content">
-        <ion-text color="light">
-          <h2 class="no-raffle-title">No hay rifas disponibles</h2>
-          <p class="no-raffle-text">Pronto tendremos nuevas rifas. ¡Vuelve pronto!</p>
-        </ion-text>
-      </ion-card-content>
-    </ion-card>
-  </section>
-
-  <section class="hero-section ion-padding-horizontal" *ngIf="hasRaffle()">
+  <section class="hero-section ion-padding-horizontal">
     <ion-grid class="hero-grid">
       <ion-row class="hero-row hero-row--desktop">
         <ion-col size="12" class="hero-col">
@@ -469,10 +457,9 @@
             expand="block"
             size="large"
             class="order-stripe-btn"
-            [disabled]="isProcessingPayment()"
             (click)="payWithStripe()"
           >
-            {{ isProcessingPayment() ? 'Procesando...' : 'Pagar con Stripe' }}
+            Pagar con Stripe
           </ion-button>
         </section>
       </ion-content>

@@ -1,5 +1,19 @@
 {
   "name": "raffle-app",
   "integrations": {},
-  "type": "angular-standalone"
+  "type": "angular-standalone",
+  "proxies": [
+    {
+      "path": "/raffles",
+      "proxyUrl": "http://localhost:3000/raffles"
+    },
+    {
+      "path": "/admin",
+      "proxyUrl": "http://localhost:3000/admin"
+    },
+    {
+      "path": "/tickets",
+      "proxyUrl": "http://localhost:3000/tickets"
+    }
+  ]
 }

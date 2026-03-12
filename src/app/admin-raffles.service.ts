@@ -25,8 +25,7 @@ export class AdminRafflesService {
   private readonly http = inject(HttpClient);
   private readonly adminAuth = inject(AdminAuthService);
 
-  private readonly apiBaseUrl =
-    (environment as any).apiBaseUrl ?? 'http://localhost:3000';
+  private readonly apiBaseUrl = environment.apiBaseUrl || 'http://localhost:3000';
 
   async createRaffle(payload: CreateRaffleRequest): Promise<CreateRaffleResponse> {
     const token = this.adminAuth.token();

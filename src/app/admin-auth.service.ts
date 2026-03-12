@@ -17,8 +17,7 @@ interface AdminLoginResponse {
 export class AdminAuthService {
   private readonly http = inject(HttpClient);
 
-  private readonly apiBaseUrl =
-    (environment as any).apiBaseUrl ?? 'http://localhost:3000';
+  private readonly apiBaseUrl = environment.apiBaseUrl || 'http://localhost:3000';
 
   readonly token = signal<string | null>(null);
   readonly isLoading = signal(false);
