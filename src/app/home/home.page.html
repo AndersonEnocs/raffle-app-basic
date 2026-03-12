@@ -572,10 +572,10 @@
                   <ion-card-content>
                     <div class="admin-widget__metric">
                       <span class="admin-widget__metric-value">
-                        {{ players.length }}
+                        {{ players().length }}
                       </span>
                       <span class="admin-widget__metric-label">
-                        jugadores registrados (demo)
+                        jugadores registrados
                       </span>
                     </div>
                     <p class="admin-widget__hint">
@@ -596,10 +596,10 @@
                   <ion-card-content>
                     <div class="admin-widget__metric admin-widget__metric--orders">
                       <span class="admin-widget__metric-value">
-                        {{ players.length }}
+                        {{ players().length }}
                       </span>
                       <span class="admin-widget__metric-label">
-                        órdenes completadas (demo)
+                        órdenes completadas
                       </span>
                     </div>
                     <p class="admin-widget__hint">
@@ -770,7 +770,7 @@
     <ng-template>
       <ion-header>
         <ion-toolbar>
-          <ion-title>Jugadores (demo)</ion-title>
+          <ion-title>Jugadores</ion-title>
           <ion-buttons slot="end">
             <ion-button fill="clear" (click)="closePlayersModal()">
               Cerrar
@@ -784,7 +784,7 @@
           <div class="players-header">
             <h2 class="players-header__title">Listado de jugadores</h2>
             <p class="players-header__subtitle">
-              Datos simulados para pruebas de interfaz.
+              Jugadores que han participado en esta rifa.
             </p>
           </div>
 
@@ -798,20 +798,21 @@
                   <span>#</span>
                   <span>Nombre</span>
                   <span>Teléfono</span>
-                  <span>Orden</span>
-                  <span>Status</span>
+                  <span>Números</span>
+                  <span>Total</span>
+                  <span>Fecha</span>
                 </div>
               </ion-label>
             </ion-item>
 
             <ion-item
-              *ngFor="let player of players"
+              *ngFor="let player of players(); let i = index"
               class="players-list__item"
             >
               <ion-label>
                 <div class="players-list__row">
                   <span class="players-list__cell players-list__cell--index">
-                    {{ player.id }}
+                    {{ i + 1 }}
                   </span>
                   <span class="players-list__cell players-list__cell--name">
                     {{ player.name }}
@@ -819,11 +820,14 @@
                   <span class="players-list__cell players-list__cell--phone">
                     {{ player.phone }}
                   </span>
-                  <span class="players-list__cell players-list__cell--order">
-                    {{ player.order }}
+                  <span class="players-list__cell players-list__cell--numbers">
+                    {{ player.numbers.join(', ') }}
                   </span>
-                  <span class="players-list__cell players-list__cell--status">
-                    {{ player.status }}
+                  <span class="players-list__cell players-list__cell--total">
+                    {{ player.totalAmount | currency:player.currency.toUpperCase() }}
+                  </span>
+                  <span class="players-list__cell players-list__cell--date">
+                    {{ player.createdAt | date:'dd/MM/yyyy' }}
                   </span>
                 </div>
               </ion-label>

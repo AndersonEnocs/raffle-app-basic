@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../environments/environment';
 
@@ -15,9 +15,9 @@ export interface Raffle {
   description: string;
   price: number;
   totalTickets: number;
-  ticketsAvailable: number; // Nuevo campo real
-  ticketsSold: number;      // Nuevo campo real
-  takenNumbers: number[];   // Nuevo campo real
+  ticketsAvailable: number; 
+  ticketsSold: number;     
+  takenNumbers: number[];  
   images: string[];
   status?: 'active' | 'completed' | 'cancelled';
   createdAt: string;
@@ -27,6 +27,10 @@ export interface Raffle {
 export interface TicketsInfo {
   totalTickets: number;
   availableNumbers: number[];
+}
+
+export interface StripeCheckoutResponse {
+  checkoutUrl: string;
 }
 
 // Interfaz para la respuesta de Stripe

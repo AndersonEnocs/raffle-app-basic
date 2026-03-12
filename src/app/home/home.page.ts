@@ -8,7 +8,7 @@ import {
 import { CommonModule, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminAuthService } from '../admin-auth.service';
-import { AdminRafflesService } from '../admin-raffles.service';
+import { AdminRafflesService, Player } from '../admin-raffles.service';
 import { LoadingController, ToastController } from '@ionic/angular';
 import { Raffle, RaffleService, TicketsInfo } from '../public-raffle.service';
 import { firstValueFrom } from 'rxjs';
@@ -98,9 +98,7 @@ export class HomePage implements OnInit {
   readonly searchNumber = signal<string>('');
   readonly selectedNumbers = signal<Array<{ value: number; type: 'system' | 'user' }>>([]);
 
-  readonly players = [
-    { id: 1, name: 'Iver Jimenez', phone: '14076078028', order: '128234', status: 'Completed' as const },
-  ];
+  readonly players = signal<Player[]>([]);
 
   readonly importe = computed(() => this.selectedNumbers().length * this.coursePrice());
 
@@ -169,7 +167,26 @@ export class HomePage implements OnInit {
 
   closeAdminDashboard(): void { this.isAdminDashboardOpen.set(false); }
   logoutAdmin(): void { this.adminAuth.logout(); this.closeAdminDashboard(); }
-  openPlayersModal(): void { this.isPlayersModalOpen.set(true); }
+
+  async openPlayersModal(): Promise<void> {
+    this.isPlayersModalOpen.set(true);
+    
+    // Cargar jugadores desde la API
+    const raffle = this.raffleData();
+    
+    if (raffle?._id) {
+      try {
+        const data = await this.adminRaffles.getPlayers(raffle._id);
+        this.players.set(data);
+      } catch (error) {
+        console.error('Error al cargar jugadores:', error);
+        this.players.set([]);
+      }
+    } else {
+      this.players.set([]);
+    }
+  }
+
   closePlayersModal(): void { this.isPlayersModalOpen.set(false); }
 
   openCreateRaffleModal(): void {

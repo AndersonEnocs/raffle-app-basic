@@ -12,6 +12,16 @@ export interface CreateRaffleRequest {
   images: File[];
 }
 
+export interface Player {
+  _id: string;
+  name: string;
+  phone: string;
+  numbers: number[];
+  totalAmount: number;
+  currency: string;
+  createdAt: string;
+}
+
 interface CreateRaffleResponse {
   statusCode: number;
   message: string;
@@ -52,6 +62,21 @@ export class AdminRafflesService {
         form,
         { headers },
       ),
+    );
+  }
+
+  async getPlayers(raffleId: string): Promise<Player[]> {
+    const token = this.adminAuth.token();
+    if (!token) {
+      throw new Error('No autorizado. Inicia sesión como administrador.');
+    }
+
+    const headers = new HttpHeaders({
+      Authorization: `Bearer ${token}`,
+    });
+
+    return firstValueFrom(
+      this.http.get<Player[]>(`${this.apiBaseUrl}/tickets/${raffleId}/players`, { headers })
     );
   }
 }
