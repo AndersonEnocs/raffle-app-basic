@@ -29,29 +29,31 @@ export interface TicketsInfo {
   availableNumbers: number[];
 }
 
+// Interfaz para la respuesta de Stripe
+export interface StripeCheckoutResponse {
+  ticketId: string;
+  checkoutUrl: string;
+  totalAmount: number;
+  currency: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class RaffleService {
   private readonly http = inject(HttpClient);
+  private readonly apiBaseUrl = (environment as any).apiBaseUrl ?? 'http://localhost:3000';
 
-  private readonly apiBaseUrl =
-    (environment as any).apiBaseUrl ?? 'http://localhost:3000';
-
-    async getLatestRaffle(): Promise<Raffle> {
-      console.log('>>> SERVICE: Iniciando getLatestRaffle con URL:', `${this.apiBaseUrl}/raffles/latest`);
-    
-      try {
-        const response = await firstValueFrom(
-          this.http.get<RaffleResponse>(`${this.apiBaseUrl}/raffles/latest`)
-        );
-        console.log('>>> SERVICE: Respuesta cruda:', response);
-        return response.data;
-      } catch (err) {
-        console.error('>>> SERVICE: Error crudo en http.get:', err);
-        throw err;
-      }
+  async getLatestRaffle(): Promise<Raffle> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<RaffleResponse>(`${this.apiBaseUrl}/raffles/latest`)
+      );
+      return response.data;
+    } catch (err) {
+      throw err;
     }
+  }
 
   getRaffleById(id: number): Observable<Raffle> {
     return this.http.get<RaffleResponse>(`${this.apiBaseUrl}/raffles/${id}`).pipe(
@@ -63,9 +65,14 @@ export class RaffleService {
     return this.http.get<Raffle[]>(`${this.apiBaseUrl}/raffles`);
   }
 
-  getTicketsInfo(raffleId: string): Observable<TicketsInfo> {
-    return this.http.get<TicketsInfo>(
-      `${this.apiBaseUrl}/tickets/${raffleId}/tickets-info`,
+  async createStripeCheckoutSession(numbers: number[], name: string, phone: string, raffleId: string): Promise<StripeCheckoutResponse> {
+    const body = { numbers, name, phone };
+    return firstValueFrom(
+      this.http.post<StripeCheckoutResponse>(`${this.apiBaseUrl}/tickets/${raffleId}/purchase`, body)
     );
+  }
+
+  getTicketsInfo(raffleId: string): Observable<TicketsInfo> {
+    return this.http.get<TicketsInfo>(`${this.apiBaseUrl}/tickets/${raffleId}/tickets-info`);
   }
 }

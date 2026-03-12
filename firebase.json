@@ -9,7 +9,7 @@
     "rewrites": [
       {
         "source": "/api/**",
-       "destination": "https://raffle-app-backend.vercel.app/**"
+       "destination": "https://raffle-app-backend-production.up.railway.app/**"
       },
       {
         "source": "**",

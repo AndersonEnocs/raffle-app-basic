@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton,
   IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle,
@@ -18,21 +18,21 @@ import { firstValueFrom } from 'rxjs';
   standalone: true,
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
-  imports:[
+  imports: [
     CommonModule, FormsModule, NgFor, NgIf, IonHeader, IonToolbar, IonTitle,
     IonContent, IonButtons, IonButton, IonGrid, IonRow, IonCol, IonCard,
     IonCardHeader, IonCardTitle, IonCardContent, IonText, IonChip, IonLabel,
     IonInput, IonModal, IonItem, IonList, IonBadge,
   ],
 })
-export class HomePage {
+export class HomePage implements OnInit {
   constructor(
     private readonly adminAuth: AdminAuthService,
     private readonly adminRaffles: AdminRafflesService,
     private readonly raffleService: RaffleService,
     private readonly loadingCtrl: LoadingController,
     private readonly toastCtrl: ToastController,
-  ) {}
+  ) { }
 
   readonly raffleData = signal<Raffle | null>(null);
   readonly loading = signal<boolean>(false);
@@ -53,7 +53,7 @@ export class HomePage {
     return { total, vendidos, disponibles: total - vendidos };
   });
 
-  readonly galleryImages = computed(() => this.raffleData()?.images ??[]);
+  readonly galleryImages = computed(() => this.raffleData()?.images ?? []);
   readonly currentSlideIndex = signal(0);
   private touchStartX = 0;
   private touchStartY = 0;
@@ -88,7 +88,7 @@ export class HomePage {
   readonly searchNumber = signal<string>('');
   readonly selectedNumbers = signal<Array<{ value: number; type: 'system' | 'user' }>>([]);
 
-  readonly players =[
+  readonly players = [
     { id: 1, name: 'Iver Jimenez', phone: '14076078028', order: '128234', status: 'Completed' as const },
   ];
 
@@ -96,7 +96,7 @@ export class HomePage {
 
   readonly orderLines = computed(() => {
     const entries = this.selectedNumbers();
-    const lines: Array<{ label: string; subtotal: number }> =[];
+    const lines: Array<{ label: string; subtotal: number }> = [];
     entries.forEach((e) => {
       lines.push({ label: `Número ${e.value}`, subtotal: this.coursePrice() });
     });
@@ -106,22 +106,24 @@ export class HomePage {
     return lines;
   });
 
-  ionViewDidEnter() {
+  ngOnInit() {
     this.loadLatestRaffle();
   }
 
   async loadLatestRaffle() {
+    console.log('>>> HOME: INTENTANDO CARGAR LA RIFA LATEST - ENTRO A LA FUNCIÓN');
     this.loading.set(true);
-    const loading = await this.loadingCtrl.create({ message: 'Cargando rifa...' });
-    await loading.present();
-
     try {
-      const data = await this.raffleService.getLatestRaffle();   
+      console.log('>>> HOME: Esperando datos de service...');
+      const data = await this.raffleService.getLatestRaffle();
+      console.log('>>> HOME: ÉXITO - Datos recibidos:', data);
+
       this.raffleData.set(data);
       if (data.soldTickets !== undefined) {
         this.soldTickets.set(data.soldTickets);
       }
     } catch (err: any) {
+      console.error('>>> HOME: ERROR CRÍTICO CAPTURADO:', err);
       const toast = await this.toastCtrl.create({
         message: 'Error al cargar la rifa. Verifica tu conexión o backend.',
         duration: 5000,
@@ -129,8 +131,8 @@ export class HomePage {
       });
       await toast.present();
     } finally {
+      console.log('>>> HOME: FINALIZÓ la carga (success o error)');
       this.loading.set(false);
-      loading.dismiss();
     }
   }
 
@@ -159,7 +161,7 @@ export class HomePage {
   logoutAdmin(): void { this.adminAuth.logout(); this.closeAdminDashboard(); }
   openPlayersModal(): void { this.isPlayersModalOpen.set(true); }
   closePlayersModal(): void { this.isPlayersModalOpen.set(false); }
-  
+
   openCreateRaffleModal(): void {
     this.raffleTitle.set('');
     this.raffleDescription.set('');
@@ -203,7 +205,7 @@ export class HomePage {
   readonly numbersForCurrentPage = computed(() => {
     const start = (this.allNumbersPage() - 1) * this.allNumbersPerPage + 1;
     const end = Math.min(start + this.allNumbersPerPage - 1, this.stats().total);
-    const numbers =[];
+    const numbers = [];
     for (let i = start; i <= end; i++) numbers.push(i);
     return numbers;
   });
@@ -261,12 +263,53 @@ export class HomePage {
     const total = this.stats().total;
     const random = Math.floor(Math.random() * total) + 1;
     if (this.isNumberAvailable(random) && !this.isNumberSelected(random)) {
-      this.selectedNumbers.update((nums) =>[...nums, { value: random, type: 'system' }]);
+      this.selectedNumbers.update((nums) => [...nums, { value: random, type: 'system' }]);
     }
   }
 
   clearNumbers(): void { this.selectedNumbers.set([]); }
   openOrder(): void { this.isOrderOpen.set(true); }
   closeOrder(): void { this.isOrderOpen.set(false); }
-  payWithStripe(): void { console.log('Pago con Stripe simulado'); }
+
+
+  async payWithStripe() {
+    try {
+      // 1. Obtener el ID de la rifa activa desde el estado del componente
+      // Ajusta 'this.currentRaffle()' según como tengas guardado el objeto Raffle
+      const activeRaffle = this.raffleData();
+      const raffleId = activeRaffle?._id || activeRaffle?.id?.toString();
+
+      if (!raffleId) {
+        console.error('No se pudo determinar el ID de la rifa activa.');
+        return;
+      }
+
+      // 2. Validaciones de formulario
+      if (!this.orderName() || !this.orderPhone()) {
+        console.error('Nombre y teléfono son obligatorios');
+        return;
+      }
+
+      // 3. Extraer solo los números
+      const numbersArray = this.selectedNumbers().map(item => item.value);
+
+      // 4. Llamada al servicio pasando el ID dinámico
+      const response = await this.raffleService.createStripeCheckoutSession(
+        numbersArray,
+        this.orderName(),
+        this.orderPhone(),
+        raffleId // ID dinámico y correcto
+      );
+
+      // 5. Redirección
+      if (response?.checkoutUrl) {
+        window.location.href = response.checkoutUrl; // Usar location.href para redirigir, o window.open si prefieres popup
+      } else {
+        throw new Error('URL de pago no recibida');
+      }
+    } catch (error) {
+      console.error('Error profesional al procesar el pago:', error);
+      // Aquí deberías lanzar un toast o alerta de UI al usuario
+    }
+  }
 }

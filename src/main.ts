@@ -9,8 +9,7 @@ import {
   IonicRouteStrategy,
   provideIonicAngular,
 } from '@ionic/angular/standalone';
-import { provideHttpClient, withFetch, withXsrfConfiguration } from '@angular/common/http';  // ← agrega withXsrfConfiguration si usas forms POST después
-
+import { provideHttpClient, withFetch, withXsrfConfiguration } from '@angular/common/http';
 import { routes } from './app/app.routes';
 import { AppComponent } from './app/app.component';
 
@@ -20,8 +19,7 @@ bootstrapApplication(AppComponent, {
     provideIonicAngular(),
     provideRouter(routes, withPreloading(PreloadAllModules)),
     provideHttpClient(
-      withFetch(),                     // fuerza fetch API (mejor en prod)
-      // withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }) // opcional si tienes CSRF
+      withFetch(),                    
     ),
   ],
 });
