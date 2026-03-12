@@ -38,19 +38,29 @@ export class HomePage implements OnInit {
   readonly loading = signal<boolean>(false);
   readonly soldTickets = signal<number>(0);
 
-  readonly coursePrice = computed(() => this.raffleData()?.price ?? 20);
+  readonly coursePrice = computed(() => this.raffleData()?.price ?? 0);
 
   getRaffleTitle(): string { return this.raffleData()?.title ?? 'Rifa Premium Truck 441'; }
-  getRaffleDescription(): string { return this.raffleData()?.description ?? 'Aprovecha tu rifa: curso exclusivo y participación en el sorteo de vehículos de alta gama.'; }
-  getCoursePriceValue(): number { return this.coursePrice(); }
-  getStatsTotal(): number { return this.stats().total; }
-  getStatsVendidos(): number { return this.stats().vendidos; }
-  getStatsDisponibles(): number { return this.stats().disponibles; }
+  getRaffleDescription(): string { return this.raffleData()?.description ?? ''; }
+  getCoursePriceValue(): number { return this.raffleData()?.price ?? 0; }
+  getStatsTotal(): number { return this.raffleData()?.totalTickets ?? 0; }
+  getStatsVendidos(): number { return this.raffleData()?.ticketsSold ?? 0; }
+  getStatsDisponibles(): number { return this.raffleData()?.ticketsAvailable ?? 0; }
 
   readonly stats = computed(() => {
-    const total = this.raffleData()?.totalTickets ?? 3000;
-    const vendidos = this.soldTickets();
-    return { total, vendidos, disponibles: total - vendidos };
+    const raffle = this.raffleData();
+    if (!raffle) return { total: 0, vendidos: 0, disponibles: 0 };
+    
+    const total = raffle.totalTickets;
+    const disponiblesCount = this.availableNumbers().size > 0 
+      ? this.availableNumbers().size 
+      : (total - (raffle.ticketsSold ?? 0));
+      
+    return { 
+      total, 
+      vendidos: total - disponiblesCount, 
+      disponibles: disponiblesCount 
+    };
   });
 
   readonly galleryImages = computed(() => this.raffleData()?.images ?? []);
@@ -119,8 +129,8 @@ export class HomePage implements OnInit {
       console.log('>>> HOME: ÉXITO - Datos recibidos:', data);
 
       this.raffleData.set(data);
-      if (data.soldTickets !== undefined) {
-        this.soldTickets.set(data.soldTickets);
+      if (data.ticketsSold !== undefined) {
+        this.soldTickets.set(data.ticketsSold);
       }
     } catch (err: any) {
       console.error('>>> HOME: ERROR CRÍTICO CAPTURADO:', err);
@@ -274,42 +284,35 @@ export class HomePage implements OnInit {
 
   async payWithStripe() {
     try {
-      // 1. Obtener el ID de la rifa activa desde el estado del componente
-      // Ajusta 'this.currentRaffle()' según como tengas guardado el objeto Raffle
       const activeRaffle = this.raffleData();
-      const raffleId = activeRaffle?._id || activeRaffle?.id?.toString();
+      const raffleId = activeRaffle?._id || activeRaffle?._id?.toString();
 
       if (!raffleId) {
         console.error('No se pudo determinar el ID de la rifa activa.');
         return;
       }
 
-      // 2. Validaciones de formulario
       if (!this.orderName() || !this.orderPhone()) {
         console.error('Nombre y teléfono son obligatorios');
         return;
       }
 
-      // 3. Extraer solo los números
       const numbersArray = this.selectedNumbers().map(item => item.value);
 
-      // 4. Llamada al servicio pasando el ID dinámico
       const response = await this.raffleService.createStripeCheckoutSession(
         numbersArray,
         this.orderName(),
         this.orderPhone(),
-        raffleId // ID dinámico y correcto
+        raffleId 
       );
 
-      // 5. Redirección
       if (response?.checkoutUrl) {
-        window.location.href = response.checkoutUrl; // Usar location.href para redirigir, o window.open si prefieres popup
+        window.location.href = response.checkoutUrl;
       } else {
         throw new Error('URL de pago no recibida');
       }
     } catch (error) {
       console.error('Error profesional al procesar el pago:', error);
-      // Aquí deberías lanzar un toast o alerta de UI al usuario
     }
   }
 }

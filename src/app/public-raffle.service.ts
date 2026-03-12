@@ -10,18 +10,18 @@ export interface RaffleResponse {
 }
 
 export interface Raffle {
-  _id?: string;
-  id?: number;
+  _id: string;
   title: string;
-  description?: string;
+  description: string;
   price: number;
   totalTickets: number;
-  soldTickets?: number;
+  ticketsAvailable: number; // Nuevo campo real
+  ticketsSold: number;      // Nuevo campo real
+  takenNumbers: number[];   // Nuevo campo real
   images: string[];
   status?: 'active' | 'completed' | 'cancelled';
-  createdAt?: string;
-  updatedAt?: string;
-  __v?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TicketsInfo {
