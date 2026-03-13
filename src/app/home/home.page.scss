@@ -274,9 +274,12 @@
 .players-list__header-row,
 .players-list__row {
   display: grid;
-  grid-template-columns: 0.6fr 2fr 1.6fr 1.2fr 1.1fr;
-  column-gap: 8px;
-  font-size: 0.8rem;
+  /* ESCRITORIO: 6 columnas proporcionales a los 6 elementos del HTML (#, Nombre, Teléfono, Números, Total, Fecha) */
+  grid-template-columns: 40px 2.5fr 1.5fr 2fr 1.2fr 1fr;
+  column-gap: 12px;
+  font-size: 0.85rem;
+  white-space: normal; /* Asegura que Ionic permita saltos de línea largos */
+  align-items: center;
 }
 
 .players-list__header-row {
@@ -284,32 +287,94 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   opacity: 0.78;
-}
-
-.players-list__row {
-  align-items: center;
+  padding: 8px 0;
 }
 
 .players-list__cell--index {
   font-weight: 600;
 }
 
-.players-list__cell--status {
-  justify-self: flex-end;
-}
-
-@media (max-width: 599px) {
-  .players-list__header-row,
-  .players-list__row {
-    grid-template-columns: 0.6fr 2.4fr 1.6fr;
-    row-gap: 2px;
-  }
-
-  .players-list__cell--order,
-  .players-list__cell--status {
+/* --- MEJORA PARA MÓVILES (Estilo Tarjeta / Card ultralimpio) --- */
+@media (max-width: 767px) {
+  /* Ocultamos el header de columnas clásicas en móvil */
+  .players-list__header {
     display: none;
   }
+
+  /* Reorganizamos la fila para que parezca una tarjeta de información limpia */
+  .players-list__row {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "index name total"
+      "index phone date"
+      "numbers numbers numbers";
+    row-gap: 6px;
+    column-gap: 12px;
+    padding: 12px 0;
+  }
+
+  /* Posicionamiento y estilizado de cada celda para móvil */
+  .players-list__cell--index {
+    grid-area: index;
+    font-size: 1.1rem;
+    min-width: 24px;
+    align-self: flex-start;
+    margin-top: 2px;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .players-list__cell--name {
+    grid-area: name;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-bone-white, #fff);
+  }
+
+  .players-list__cell--phone {
+    grid-area: phone;
+    font-size: 0.85rem;
+    opacity: 0.8;
+  }
+
+  .players-list__cell--total {
+    grid-area: total;
+    font-weight: 700;
+    color: var(--color-golden-yellow, #f9c74f);
+    font-size: 0.95rem;
+    text-align: right;
+    background: rgba(249, 199, 79, 0.12);
+    padding: 4px 10px;
+    border-radius: 8px;
+    align-self: center;
+  }
+
+  .players-list__cell--date {
+    grid-area: date;
+    font-size: 0.8rem;
+    opacity: 0.6;
+    text-align: right;
+  }
+
+  .players-list__cell--numbers {
+    grid-area: numbers;
+    font-size: 0.9rem;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.15);
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+    word-wrap: break-word;
+  }
+
+  /* Añadimos un texto indicador en móvil para dar contexto visual */
+  .players-list__cell--numbers::before {
+    content: "Números: ";
+    font-weight: 600;
+    opacity: 0.6;
+    font-size: 0.85rem;
+  }
 }
+/* --- FIN DE LA MEJORA MÓVIL --- */
 
 .header-badge {
   .jackpot-chip {
