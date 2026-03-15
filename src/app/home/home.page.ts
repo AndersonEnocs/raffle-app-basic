@@ -3,7 +3,7 @@ import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton,
   IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle,
   IonCardContent, IonText, IonChip, IonLabel, IonInput, IonModal,
-  IonItem, IonList, IonBadge, IonSelect, IonSelectOption,
+  IonItem, IonList, IonBadge, IonSelect, IonSelectOption, IonSpinner,
 } from '@ionic/angular/standalone';
 import { CommonModule, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -23,6 +23,7 @@ import { firstValueFrom } from 'rxjs';
     IonContent, IonButtons, IonButton, IonGrid, IonRow, IonCol, IonCard,
     IonCardHeader, IonCardTitle, IonCardContent, IonText, IonChip, IonLabel,
     IonInput, IonModal, IonItem, IonList, IonBadge, IonSelect, IonSelectOption,
+    IonSpinner,
   ],
 })
 export class HomePage implements OnInit {
@@ -82,6 +83,7 @@ export class HomePage implements OnInit {
   readonly orderPhoneCountry = signal('+1');
   readonly orderPhoneNational = signal('');
   readonly adminPassword = signal('');
+  readonly isStripeLoading = signal(false);
 
   readonly isAdminAuthenticated = computed(() => this.adminAuth.isAuthenticated());
   readonly adminAuthError = computed(() => this.adminAuth.error() ?? '');
@@ -394,50 +396,66 @@ export class HomePage implements OnInit {
   }
 
 
-  async payWithStripe() {
+  async payWithStripe(): Promise<void> {
+    if (this.isStripeLoading()) return;
+
+    const activeRaffle = this.raffleData();
+    const raffleId = activeRaffle?._id ?? activeRaffle?._id?.toString();
+
+    if (!raffleId) {
+      console.error('No se pudo determinar el ID de la rifa activa.');
+      return;
+    }
+
+    const name = this.orderName().trim();
+    const phone = this.orderPhone().trim();
+
+    if (!name) {
+      await this.showOrderValidationToast('Por favor, ingresa tu nombre.');
+      return;
+    }
+
+    if (!phone) {
+      await this.showOrderValidationToast('Por favor, ingresa un teléfono.');
+      return;
+    }
+
+    if (!/^\+\d{8,15}$/.test(phone)) {
+      await this.showOrderValidationToast('El teléfono debe ser un número internacional válido (ej. +15555551234).');
+      return;
+    }
+
+    this.isStripeLoading.set(true);
+    const loading = await this.loadingCtrl.create({
+      message: 'Procesando pago...',
+      spinner: 'crescent',
+      backdropDismiss: false,
+      cssClass: 'stripe-loading',
+    });
+    await loading.present();
+
     try {
-      const activeRaffle = this.raffleData();
-      const raffleId = activeRaffle?._id || activeRaffle?._id?.toString();
-
-      if (!raffleId) {
-        console.error('No se pudo determinar el ID de la rifa activa.');
-        return;
-      }
-
-      const name = this.orderName().trim();
-      const phone = this.orderPhone().trim();
-
-      if (!name) {
-        await this.showOrderValidationToast('Por favor, ingresa tu nombre.');
-        return;
-      }
-
-      if (!phone) {
-        await this.showOrderValidationToast('Por favor, ingresa un teléfono.');
-        return;
-      }
-
-      if (!/^\+\d{8,15}$/.test(phone)) {
-        await this.showOrderValidationToast('El teléfono debe ser un número internacional válido (ej. +15555551234).');
-        return;
-      }
-
       const numbersArray = this.selectedNumbers().map(item => item.value);
-
       const response = await this.raffleService.createStripeCheckoutSession(
         numbersArray,
         this.orderName(),
         this.orderPhone(),
-        raffleId 
+        raffleId
       );
 
       if (response?.checkoutUrl) {
+        await loading.dismiss();
+        this.isStripeLoading.set(false);
         window.location.href = response.checkoutUrl;
-      } else {
-        throw new Error('URL de pago no recibida');
+        return;
       }
+      throw new Error('URL de pago no recibida');
     } catch (error) {
-      console.error('Error profesional al procesar el pago:', error);
+      console.error('Error al procesar el pago:', error);
+      await loading.dismiss();
+      await this.showOrderValidationToast('No se pudo iniciar el pago. Intenta de nuevo.');
+    } finally {
+      this.isStripeLoading.set(false);
     }
   }
 

@@ -473,9 +473,12 @@
             expand="block"
             size="large"
             class="order-stripe-btn"
+            [disabled]="isStripeLoading()"
             (click)="payWithStripe()"
           >
-            Pagar con Stripe
+            <ion-spinner *ngIf="isStripeLoading()" name="crescent"></ion-spinner>
+            <span *ngIf="!isStripeLoading()">Pagar con Stripe</span>
+            <span *ngIf="isStripeLoading()">Procesando...</span>
           </ion-button>
         </section>
       </ion-content>

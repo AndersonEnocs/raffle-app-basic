@@ -1216,6 +1216,11 @@
   font-weight: 600;
   letter-spacing: 0.03em;
   margin-top: 8px;
+
+  ion-spinner {
+    margin-inline-end: 8px;
+    vertical-align: middle;
+  }
 }
 
 // —— Crear rifa ——
