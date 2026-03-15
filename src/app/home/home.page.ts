@@ -426,21 +426,6 @@ export class HomePage implements OnInit {
     }
 
     this.isStripeLoading.set(true);
-    const loading = await this.loadingCtrl.create({
-      message: 'Procesando pago...',
-      spinner: 'crescent',
-      backdropDismiss: false,
-      cssClass: 'stripe-loading',
-    });
-    await loading.present();
-
-    const dismissLoading = async (): Promise<void> => {
-      try {
-        await loading.dismiss();
-      } catch {
-        // Ignora si el overlay ya se cerró
-      }
-    };
 
     try {
       const numbersArray = this.selectedNumbers().map(item => item.value);
@@ -464,7 +449,6 @@ export class HomePage implements OnInit {
       throw new Error('URL de pago no recibida');
     } catch (error: unknown) {
       console.error('Error al procesar el pago:', error);
-      await dismissLoading();
       const msg =
         error instanceof Error && error.message === 'TIMEOUT'
           ? 'El servidor no respondió a tiempo. Verifica tu conexión e intenta de nuevo.'
