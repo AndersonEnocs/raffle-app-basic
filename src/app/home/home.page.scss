@@ -1128,6 +1128,36 @@
   font-size: 1rem;
 }
 
+.order-phone-group {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.9fr) 2.1fr;
+  gap: 8px;
+}
+
+.order-phone-select {
+  --background: rgba(255, 255, 255, 0.95);
+  --color: #1a1a1a;
+  --placeholder-color: rgba(0, 0, 0, 0.45);
+  --padding-start: 10px;
+  --padding-end: 6px;
+  --indicator-color: #1a1a1a;
+  border-radius: var(--ion-border-radius-md);
+  font-size: 0.85rem;
+}
+
+.order-phone-select::part(text) {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.order-phone-select::part(icon) {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.order-phone-input {
+  width: 100%;
+}
+
 .order-section-title {
   margin: 0 0 12px;
   font-size: 1.1rem;

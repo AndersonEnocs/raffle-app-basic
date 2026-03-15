@@ -424,13 +424,29 @@
               [ngModel]="orderName()"
               (ngModelChange)="orderName.set($event)"
             ></ion-input>
-            <ion-input
-              type="tel"
-              class="order-input"
-              placeholder="TELÉFONO"
-              [ngModel]="orderPhone()"
-              (ngModelChange)="orderPhone.set($event)"
-            ></ion-input>
+            <div class="order-phone-group">
+              <ion-select
+                class="order-phone-select"
+                interface="popover"
+                [ngModel]="orderPhoneCountry()"
+                (ngModelChange)="onOrderPhoneCountryChange($event)"
+              >
+                <ion-select-option
+                  *ngFor="let c of phoneCountries"
+                  [value]="c.code"
+                >
+                  {{ c.label }}
+                </ion-select-option>
+              </ion-select>
+              <ion-input
+                type="tel"
+                inputmode="tel"
+                class="order-input order-phone-input"
+                placeholder="TELÉFONO"
+                [ngModel]="orderPhoneNational()"
+                (ngModelChange)="onOrderPhoneNationalChange($event)"
+              ></ion-input>
+            </div>
           </div>
 
           <h2 class="order-section-title">TUS PEDIDOS</h2>

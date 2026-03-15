@@ -3,7 +3,7 @@ import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton,
   IonGrid, IonRow, IonCol, IonCard, IonCardHeader, IonCardTitle,
   IonCardContent, IonText, IonChip, IonLabel, IonInput, IonModal,
-  IonItem, IonList, IonBadge,
+  IonItem, IonList, IonBadge, IonSelect, IonSelectOption,
 } from '@ionic/angular/standalone';
 import { CommonModule, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -22,7 +22,7 @@ import { firstValueFrom } from 'rxjs';
     CommonModule, FormsModule, NgFor, NgIf, IonHeader, IonToolbar, IonTitle,
     IonContent, IonButtons, IonButton, IonGrid, IonRow, IonCol, IonCard,
     IonCardHeader, IonCardTitle, IonCardContent, IonText, IonChip, IonLabel,
-    IonInput, IonModal, IonItem, IonList, IonBadge,
+    IonInput, IonModal, IonItem, IonList, IonBadge, IonSelect, IonSelectOption,
   ],
 })
 export class HomePage implements OnInit {
@@ -79,6 +79,8 @@ export class HomePage implements OnInit {
 
   readonly orderName = signal('');
   readonly orderPhone = signal('');
+  readonly orderPhoneCountry = signal('+1');
+  readonly orderPhoneNational = signal('');
   readonly adminPassword = signal('');
 
   readonly isAdminAuthenticated = computed(() => this.adminAuth.isAuthenticated());
@@ -101,6 +103,19 @@ export class HomePage implements OnInit {
   readonly players = signal<Player[]>([]);
 
   readonly importe = computed(() => this.selectedNumbers().length * this.coursePrice());
+
+  readonly phoneCountries: Array<{ code: string; iso: string; label: string }> = [
+    { code: '+1', iso: 'US', label: '🇺🇸 Estados Unidos / Canadá (+1)' },
+    { code: '+52', iso: 'MX', label: '🇲🇽 México (+52)' },
+    { code: '+57', iso: 'CO', label: '🇨🇴 Colombia (+57)' },
+    { code: '+51', iso: 'PE', label: '🇵🇪 Perú (+51)' },
+    { code: '+54', iso: 'AR', label: '🇦🇷 Argentina (+54)' },
+    { code: '+56', iso: 'CL', label: '🇨🇱 Chile (+56)' },
+    { code: '+34', iso: 'ES', label: '🇪🇸 España (+34)' },
+    { code: '+58', iso: 'VE', label: '🇻🇪 Venezuela (+58)' },
+    { code: '+53', iso: 'CU', label: '🇨🇺 Cuba (+53)' },
+    { code: '+1', iso: 'DO', label: '🇩🇴 República Dominicana (+1)' },
+  ];
 
   readonly orderLines = computed(() => {
     const entries = this.selectedNumbers();
@@ -221,11 +236,6 @@ export class HomePage implements OnInit {
     }
   }
 
-  isNumberAvailable(n: number): boolean {
-    const availableSet = this.availableNumbers();
-    return availableSet.size > 0 ? availableSet.has(n) : n > this.soldTickets();
-  }
-
   readonly allNumbersPerPage = 1000;
   readonly allNumbersTotalPages = computed(() => Math.ceil(this.stats().total / this.allNumbersPerPage));
 
@@ -239,15 +249,7 @@ export class HomePage implements OnInit {
 
   async openAllNumbers(): Promise<void> {
     this.allNumbersPage.set(1);
-    const raffle = this.raffleData();
-    if (!raffle?._id) { this.isAllNumbersOpen.set(true); return; }
-    try {
-      const ticketsInfo: TicketsInfo = await firstValueFrom(this.raffleService.getTicketsInfo(raffle._id));
-      this.availableNumbers.set(new Set(ticketsInfo.availableNumbers));
-      this.soldTickets.set(ticketsInfo.totalTickets - ticketsInfo.availableNumbers.length);
-    } catch (error) {
-      console.error(error);
-    }
+    await this.ensureTicketsInfoLoaded();
     this.isAllNumbersOpen.set(true);
   }
 
@@ -262,6 +264,14 @@ export class HomePage implements OnInit {
   }
 
   isNumberSelected(n: number): boolean { return this.selectedNumbers().some((num) => num.value === n); }
+
+  isNumberAvailable(n: number): boolean {
+    const availableSet = this.availableNumbers();
+    if (availableSet.size > 0) {
+      return availableSet.has(n);
+    }
+    return true;
+  }
   toggleGallery(open: boolean): void { this.isGalleryOpen.set(open); if (open) this.currentSlideIndex.set(0); }
   get totalSlides(): number { return this.galleryImages().length; }
   goToSlide(index: number): void { this.currentSlideIndex.set(index); }
@@ -277,16 +287,52 @@ export class HomePage implements OnInit {
     }
   }
 
-  togglePurchase(open: boolean): void { this.isPurchaseOpen.set(open); }
-  onSearchConfirm(): void {
-    const num = parseInt(this.searchNumber(), 10);
-    if (num >= 1 && num <= this.stats().total && this.isNumberAvailable(num)) {
-      this.selectedNumbers.update((nums) => [...nums, { value: num, type: 'user' }]);
-      this.searchNumber.set('');
+  async togglePurchase(open: boolean): Promise<void> {
+    if (open) {
+      await this.ensureTicketsInfoLoaded();
     }
+    this.isPurchaseOpen.set(open);
   }
 
-  pickRandomNumber(): void {
+  async onSearchConfirm(): Promise<void> {
+    await this.ensureTicketsInfoLoaded();
+
+    const raw = String(this.searchNumber() ?? '').trim();
+
+    if (!raw) {
+      await this.showOrderValidationToast('Por favor, ingresa un número para buscar.');
+      return;
+    }
+
+    const num = parseInt(raw, 10);
+
+    if (Number.isNaN(num)) {
+      await this.showOrderValidationToast('El valor ingresado no es un número válido.');
+      return;
+    }
+
+    if (num < 1 || num > this.stats().total) {
+      await this.showOrderValidationToast('Ese número está fuera del rango de la rifa. Prueba con otro.');
+      return;
+    }
+
+    if (!this.isNumberAvailable(num)) {
+      await this.showOrderValidationToast('Ese número ya no está disponible. Elige otro número.');
+      return;
+    }
+
+    if (this.isNumberSelected(num)) {
+      await this.showOrderValidationToast('Ya tienes ese número en tu selección.');
+      return;
+    }
+
+    this.selectedNumbers.update((nums) => [...nums, { value: num, type: 'user' }]);
+    this.searchNumber.set('');
+  }
+
+  async pickRandomNumber(): Promise<void> {
+    await this.ensureTicketsInfoLoaded();
+
     const total = this.stats().total;
     const random = Math.floor(Math.random() * total) + 1;
     if (this.isNumberAvailable(random) && !this.isNumberSelected(random)) {
@@ -297,6 +343,55 @@ export class HomePage implements OnInit {
   clearNumbers(): void { this.selectedNumbers.set([]); }
   openOrder(): void { this.isOrderOpen.set(true); }
   closeOrder(): void { this.isOrderOpen.set(false); }
+
+  onOrderPhoneCountryChange(newCode: string): void {
+    this.orderPhoneCountry.set(newCode);
+    this.syncOrderPhone();
+  }
+
+  onOrderPhoneNationalChange(value: string): void {
+    this.orderPhoneNational.set(value);
+    this.syncOrderPhone();
+  }
+
+  private syncOrderPhone(): void {
+    const countryCodeRaw = this.orderPhoneCountry() ?? '';
+    const nationalRaw = this.orderPhoneNational() ?? '';
+
+    const digitsOnly = nationalRaw.replace(/\D+/g, '');
+
+    if (!digitsOnly) {
+      this.orderPhone.set('');
+      return;
+    }
+
+    const normalizedCountry = countryCodeRaw.replace(/\s+/g, '');
+    const e164Phone = `${normalizedCountry}${digitsOnly}`;
+
+    const formattedForInput = digitsOnly.replace(/(.{4})/g, '$1 ').trim();
+    this.orderPhoneNational.set(formattedForInput);
+
+    this.orderPhone.set(e164Phone);
+  }
+
+  private async ensureTicketsInfoLoaded(): Promise<void> {
+    if (this.availableNumbers().size > 0) return;
+
+    const raffle = this.raffleData();
+    if (!raffle?._id) return;
+
+    try {
+      const ticketsInfo: TicketsInfo = await firstValueFrom(
+        this.raffleService.getTicketsInfo(raffle._id)
+      );
+      this.availableNumbers.set(new Set(ticketsInfo.availableNumbers));
+      this.soldTickets.set(
+        ticketsInfo.totalTickets - ticketsInfo.availableNumbers.length
+      );
+    } catch (error) {
+      console.error('Error al cargar información de tickets:', error);
+    }
+  }
 
 
   async payWithStripe() {
@@ -309,8 +404,21 @@ export class HomePage implements OnInit {
         return;
       }
 
-      if (!this.orderName() || !this.orderPhone()) {
-        console.error('Nombre y teléfono son obligatorios');
+      const name = this.orderName().trim();
+      const phone = this.orderPhone().trim();
+
+      if (!name) {
+        await this.showOrderValidationToast('Por favor, ingresa tu nombre.');
+        return;
+      }
+
+      if (!phone) {
+        await this.showOrderValidationToast('Por favor, ingresa un teléfono.');
+        return;
+      }
+
+      if (!/^\+\d{8,15}$/.test(phone)) {
+        await this.showOrderValidationToast('El teléfono debe ser un número internacional válido (ej. +15555551234).');
         return;
       }
 
@@ -331,5 +439,15 @@ export class HomePage implements OnInit {
     } catch (error) {
       console.error('Error profesional al procesar el pago:', error);
     }
+  }
+
+  private async showOrderValidationToast(message: string): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 2500,
+      color: 'warning',
+      position: 'top',
+    });
+    await toast.present();
   }
 }

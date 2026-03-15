@@ -71,6 +71,8 @@
   font-size: 1.8rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  color: var(--color-golden-yellow, #f9c74f) !important;
+  text-shadow: 0 0 24px rgba(249, 199, 79, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .success-message {
