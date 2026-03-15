@@ -434,29 +434,58 @@ export class HomePage implements OnInit {
     });
     await loading.present();
 
+    const dismissLoading = async (): Promise<void> => {
+      try {
+        await loading.dismiss();
+      } catch {
+        // Ignora si el overlay ya se cerró
+      }
+    };
+
     try {
       const numbersArray = this.selectedNumbers().map(item => item.value);
-      const response = await this.raffleService.createStripeCheckoutSession(
+      const requestPromise = this.raffleService.createStripeCheckoutSession(
         numbersArray,
         this.orderName(),
         this.orderPhone(),
         raffleId
       );
+      const timeoutMs = 20000;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs);
+      });
+      const response = await Promise.race([requestPromise, timeoutPromise]);
 
       if (response?.checkoutUrl) {
-        await loading.dismiss();
         this.isStripeLoading.set(false);
         window.location.href = response.checkoutUrl;
         return;
       }
       throw new Error('URL de pago no recibida');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error al procesar el pago:', error);
-      await loading.dismiss();
-      await this.showOrderValidationToast('No se pudo iniciar el pago. Intenta de nuevo.');
+      await dismissLoading();
+      const msg =
+        error instanceof Error && error.message === 'TIMEOUT'
+          ? 'El servidor no respondió a tiempo. Verifica tu conexión e intenta de nuevo.'
+          : this.getPaymentErrorMessage(error);
+      await this.showOrderValidationToast(msg);
     } finally {
       this.isStripeLoading.set(false);
     }
+  }
+
+  private getPaymentErrorMessage(error: unknown): string {
+    if (error && typeof error === 'object' && 'status' in error) {
+      const status = (error as { status?: number }).status;
+      if (status === 0) {
+        return 'No hay conexión con el servidor. Revisa tu internet o que la URL del backend sea correcta.';
+      }
+      if (status !== undefined && (status === 404 || status >= 500)) {
+        return 'El servidor no está disponible. Intenta más tarde.';
+      }
+    }
+    return 'No se pudo iniciar el pago. Intenta de nuevo.';
   }
 
   private async showOrderValidationToast(message: string): Promise<void> {
